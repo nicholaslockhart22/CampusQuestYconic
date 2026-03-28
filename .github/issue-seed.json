@@ -1,0 +1,233 @@
+{
+  "labels": [
+    { "name": "type:epic", "color": "5319e7", "description": "Top-level product epic" },
+    { "name": "type:story", "color": "1d76db", "description": "Implementation story" },
+    { "name": "type:infra", "color": "0052cc", "description": "Infrastructure or DX task" },
+    { "name": "area:mobile", "color": "0e8a16", "description": "Mobile client work" },
+    { "name": "area:backend", "color": "fbca04", "description": "Backend API and domain work" },
+    { "name": "area:admin", "color": "d93f0b", "description": "Admin or moderation work" },
+    { "name": "area:platform", "color": "006b75", "description": "Platform, CI, env, infra" },
+    { "name": "area:analytics", "color": "bfdadc", "description": "Analytics and observability" },
+    { "name": "priority:p0", "color": "b60205", "description": "Critical path" },
+    { "name": "priority:p1", "color": "d93f0b", "description": "Important" },
+    { "name": "priority:p2", "color": "fbca04", "description": "Useful but not urgent" },
+    { "name": "sprint:0", "color": "c5def5", "description": "Sprint 0 backlog" },
+    { "name": "sprint:1", "color": "c5def5", "description": "Sprint 1 backlog" },
+    { "name": "sprint:2", "color": "c5def5", "description": "Sprint 2 backlog" },
+    { "name": "sprint:3", "color": "c5def5", "description": "Sprint 3 backlog" },
+    { "name": "sprint:4", "color": "c5def5", "description": "Sprint 4 backlog" }
+  ],
+  "milestones": [
+    { "title": "Sprint 0", "description": "Architecture and Enablement" },
+    { "title": "Sprint 1", "description": "Onboarding and Core Activity Loop" },
+    { "title": "Sprint 2", "description": "Streaks, Quests, and Progression" },
+    { "title": "Sprint 3", "description": "Social Feed and Leaderboards" },
+    { "title": "Sprint 4", "description": "Pilot Hardening and Launch Readiness" }
+  ],
+  "epics": [
+    {
+      "title": "Epic: Platform Foundations",
+      "labels": ["type:epic", "area:platform", "priority:p0"],
+      "body": "Outcome: create the technical foundation for a production-grade MVP.\n\nScope:\n- monorepo or workspace structure\n- CI and test automation\n- environment configuration\n- auth/session primitives\n- DB migrations and seed data\n- typed API contracts\n- analytics and observability scaffolding\n\nExit criteria:\n- local dev setup works for all engineers\n- CI validates lint, test, and typecheck\n- staging environment is deployable\n- baseline auth and healthcheck paths are live"
+    },
+    {
+      "title": "Epic: Identity, Onboarding, and Campus Membership",
+      "labels": ["type:epic", "area:backend", "area:mobile", "priority:p0"],
+      "body": "Outcome: a student can sign up, verify school affiliation, select a campus, and create a profile.\n\nScope:\n- email signup and login\n- school email verification\n- profile creation and editing\n- campus scoping rules\n- onboarding flow"
+    },
+    {
+      "title": "Epic: Activity Logging and Reward Engine",
+      "labels": ["type:epic", "area:backend", "priority:p0"],
+      "body": "Outcome: a student can log real-world activity and receive deterministic XP and stat rewards.\n\nScope:\n- activity type catalog\n- activity submission flows\n- reward rules engine\n- idempotent reward events\n- anti-abuse controls"
+    },
+    {
+      "title": "Epic: Progression, Streaks, and Quests",
+      "labels": ["type:epic", "area:backend", "area:mobile", "priority:p0"],
+      "body": "Outcome: a student can see daily progress, active streaks, available quests, and earned achievements.\n\nScope:\n- progression dashboard\n- streak engine\n- daily and weekly quests\n- quest progress tracking\n- completion and claim flows"
+    },
+    {
+      "title": "Epic: Social Feed and Validation",
+      "labels": ["type:epic", "area:backend", "area:mobile", "priority:p1"],
+      "body": "Outcome: students can share achievements to a campus feed and interact through reactions and validations.\n\nScope:\n- campus feed retrieval\n- post creation from activities or quests\n- reactions\n- validations\n- privacy and sharing controls"
+    },
+    {
+      "title": "Epic: Leaderboards, Competition, and Retention",
+      "labels": ["type:epic", "area:backend", "area:mobile", "priority:p1"],
+      "body": "Outcome: students can compare progress and receive lightweight motivation from competition.\n\nScope:\n- campus leaderboards\n- time-window ranking\n- streak risk reminders\n- in-app notifications for wins and interactions"
+    },
+    {
+      "title": "Epic: Admin, Moderation, and Operations",
+      "labels": ["type:epic", "area:admin", "priority:p1"],
+      "body": "Outcome: internal operators can manage quests, reward rules, abuse handling, and pilot operations.\n\nScope:\n- admin login and access control\n- moderation queue\n- report review\n- quest template management\n- reward rule management\n- audit trails"
+    },
+    {
+      "title": "Epic: Beta Readiness and Pilot Launch",
+      "labels": ["type:epic", "area:platform", "area:analytics", "priority:p1"],
+      "body": "Outcome: the system is stable enough for a controlled campus pilot.\n\nScope:\n- performance hardening\n- analytics dashboards\n- smoke tests\n- support flows\n- release checklists"
+    }
+  ],
+  "stories": [
+    {
+      "title": "Set up repository layout for mobile, admin, API, and shared packages",
+      "labels": ["type:infra", "area:platform", "priority:p0", "sprint:0"],
+      "milestone": "Sprint 0",
+      "body": "Create the repo layout and ownership boundaries needed for 5-8 senior engineers to work concurrently.\n\nAcceptance criteria:\n- apps/mobile exists\n- apps/admin exists\n- services/api exists\n- packages/contracts exists\n- packages/analytics exists\n- ownership boundaries are documented"
+    },
+    {
+      "title": "Create CI pipeline for lint, typecheck, unit test, and build",
+      "labels": ["type:infra", "area:platform", "priority:p0", "sprint:0"],
+      "milestone": "Sprint 0",
+      "body": "Acceptance criteria:\n- CI runs on pull requests\n- lint, typecheck, unit tests, and builds are enforced\n- failures block merge"
+    },
+    {
+      "title": "Define API contract package and schema conventions",
+      "labels": ["type:infra", "area:platform", "priority:p0", "sprint:0"],
+      "milestone": "Sprint 0",
+      "body": "Acceptance criteria:\n- shared schema package exists\n- DTO naming conventions are documented\n- client generation path is defined"
+    },
+    {
+      "title": "Create baseline database migration for users, campuses, and sessions",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:0"],
+      "milestone": "Sprint 0",
+      "body": "Acceptance criteria:\n- baseline migration created\n- local DB bootstraps cleanly\n- seed data path exists"
+    },
+    {
+      "title": "Add auth scaffold and health endpoints",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:0"],
+      "milestone": "Sprint 0",
+      "body": "Acceptance criteria:\n- health endpoint returns OK\n- auth module scaffold exists\n- session lifecycle is stubbed for feature work"
+    },
+    {
+      "title": "Build signup and login screens",
+      "labels": ["type:story", "area:mobile", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- signup screen exists\n- login screen exists\n- validation states and loading states are handled"
+    },
+    {
+      "title": "Implement signup, login, logout, and session APIs",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- signup API exists\n- login API exists\n- logout API exists\n- sessions persist correctly"
+    },
+    {
+      "title": "Implement school email verification and campus lookup",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- school email verification flow works\n- campus lookup resolves from school email domain\n- unverified users are handled explicitly"
+    },
+    {
+      "title": "Build profile creation and campus selection UI",
+      "labels": ["type:story", "area:mobile", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- profile form exists\n- campus selection exists\n- profile persists after submit"
+    },
+    {
+      "title": "Implement activity type catalog and activity create endpoint",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- activity catalog is available via API\n- activity create endpoint exists\n- request validation is enforced"
+    },
+    {
+      "title": "Implement reward engine v1 with idempotent reward events",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- reward event is emitted once per idempotency key\n- XP and stat deltas are server-authoritative\n- duplicate submissions do not double-grant rewards"
+    },
+    {
+      "title": "Build dashboard shell with level, XP, stats, and recent activity",
+      "labels": ["type:story", "area:mobile", "priority:p0", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- dashboard screen exists\n- level and total XP are visible\n- recent activity surface exists"
+    },
+    {
+      "title": "Add analytics events for signup and activity logging",
+      "labels": ["type:story", "area:analytics", "priority:p1", "sprint:1"],
+      "milestone": "Sprint 1",
+      "body": "Acceptance criteria:\n- signup_completed event is emitted\n- activity_logged event is emitted\n- event contracts are documented"
+    },
+    {
+      "title": "Implement streak state model and evaluation rules",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:2"],
+      "milestone": "Sprint 2",
+      "body": "Acceptance criteria:\n- streak state persists\n- qualifying events update streaks\n- streak logic is server-authoritative"
+    },
+    {
+      "title": "Implement quest templates, assignment, and progress tracking",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:2"],
+      "milestone": "Sprint 2",
+      "body": "Acceptance criteria:\n- daily and weekly quest templates exist\n- user quests are assigned\n- progress updates automatically from activity events"
+    },
+    {
+      "title": "Build progression UI for streaks and quests",
+      "labels": ["type:story", "area:mobile", "priority:p0", "sprint:2"],
+      "milestone": "Sprint 2",
+      "body": "Acceptance criteria:\n- streak card exists\n- quest list exists\n- quest claim flow exists"
+    },
+    {
+      "title": "Build internal quest template CRUD UI",
+      "labels": ["type:story", "area:admin", "priority:p1", "sprint:2"],
+      "milestone": "Sprint 2",
+      "body": "Acceptance criteria:\n- admin can create quest templates\n- admin can edit quest templates\n- admin access is gated"
+    },
+    {
+      "title": "Implement feed read and create endpoints",
+      "labels": ["type:story", "area:backend", "priority:p1", "sprint:3"],
+      "milestone": "Sprint 3",
+      "body": "Acceptance criteria:\n- campus feed endpoint exists\n- post creation endpoint exists\n- campus scope is enforced"
+    },
+    {
+      "title": "Implement reactions, validations, and report submission",
+      "labels": ["type:story", "area:backend", "priority:p1", "sprint:3"],
+      "milestone": "Sprint 3",
+      "body": "Acceptance criteria:\n- reactions are persisted\n- validations are persisted\n- reports enter a moderation queue"
+    },
+    {
+      "title": "Build campus feed UI and share flow",
+      "labels": ["type:story", "area:mobile", "priority:p1", "sprint:3"],
+      "milestone": "Sprint 3",
+      "body": "Acceptance criteria:\n- feed screen exists\n- users can share eligible achievements\n- privacy controls are respected"
+    },
+    {
+      "title": "Implement leaderboard ranking queries and anti-abuse filters",
+      "labels": ["type:story", "area:backend", "priority:p1", "sprint:3"],
+      "milestone": "Sprint 3",
+      "body": "Acceptance criteria:\n- daily, weekly, and all-time rankings exist\n- suspicious activity is filtered or discounted\n- ranking API is documented"
+    },
+    {
+      "title": "Build moderation queue and post removal workflow",
+      "labels": ["type:story", "area:admin", "priority:p1", "sprint:3"],
+      "milestone": "Sprint 3",
+      "body": "Acceptance criteria:\n- reports are visible in admin\n- operator can remove posts\n- audit log is recorded"
+    },
+    {
+      "title": "Harden idempotency and retry-safe critical writes",
+      "labels": ["type:story", "area:backend", "priority:p0", "sprint:4"],
+      "milestone": "Sprint 4",
+      "body": "Acceptance criteria:\n- retry-safe write paths are covered\n- reward duplication protections are verified\n- failure scenarios are documented"
+    },
+    {
+      "title": "Build activation and retention dashboards",
+      "labels": ["type:story", "area:analytics", "priority:p1", "sprint:4"],
+      "milestone": "Sprint 4",
+      "body": "Acceptance criteria:\n- activation dashboard exists\n- retention dashboard exists\n- event quality is validated"
+    },
+    {
+      "title": "Implement in-app notification center",
+      "labels": ["type:story", "area:mobile", "priority:p1", "sprint:4"],
+      "milestone": "Sprint 4",
+      "body": "Acceptance criteria:\n- notification center exists\n- quest, streak, reaction, and validation events are represented"
+    },
+    {
+      "title": "Finish reward rule management and support tooling",
+      "labels": ["type:story", "area:admin", "priority:p1", "sprint:4"],
+      "milestone": "Sprint 4",
+      "body": "Acceptance criteria:\n- reward rules can be updated by admin\n- user lookup exists\n- activity inspection exists"
+    },
+    {
+      "title": "Complete smoke suite and pilot rollout checklist",
+      "labels": ["type:story", "area:platform", "priority:p1", "sprint:4"],
+      "milestone": "Sprint 4",
+      "body": "Acceptance criteria:\n- smoke suite covers onboarding, activity logging, quests, and feed\n- pilot checklist exists\n- incident process exists"
+    }
+  ]
+}

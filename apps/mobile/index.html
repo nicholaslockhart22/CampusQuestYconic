@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CampusQuest Mobile</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="app-rail">
+        <div class="brand-block">
+          <span class="brand-mark">CQ</span>
+          <div>
+            <p class="eyebrow">Sprint 3 Build</p>
+            <h1>CampusQuest</h1>
+          </div>
+        </div>
+        <div class="rail-copy">
+          <h2>Real progress. Visible rewards.</h2>
+          <p>
+            This working client now covers onboarding, progression, campus
+            social feed, lightweight validation, reporting, and rankings.
+          </p>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <section class="panel auth-panel" id="auth-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Authentication</p>
+              <h2>Enter the game</h2>
+            </div>
+            <button class="ghost-button" id="mode-toggle" type="button">Switch to login</button>
+          </div>
+          <form id="auth-form">
+            <label>
+              Display name
+              <input id="displayName" name="displayName" placeholder="Nova Carter" />
+            </label>
+            <label>
+              Email
+              <input id="email" name="email" type="email" placeholder="nova@example.com" required />
+            </label>
+            <label>
+              Password
+              <input id="password" name="password" type="password" placeholder="••••••••" required />
+            </label>
+            <button class="primary-button" type="submit">Create account</button>
+          </form>
+          <p class="status-text" id="auth-status"></p>
+        </section>
+
+        <section class="panel hidden" id="onboarding-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Campus verification</p>
+              <h2>Join your campus</h2>
+            </div>
+          </div>
+          <form id="verify-form">
+            <label>
+              School email
+              <input id="schoolEmail" name="schoolEmail" type="email" placeholder="nova@nyu.edu" required />
+            </label>
+            <button class="primary-button" type="submit">Verify school email</button>
+          </form>
+          <div class="campus-list" id="campus-list"></div>
+          <p class="status-text" id="verify-status"></p>
+        </section>
+
+        <section class="panel hidden" id="dashboard-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2 id="welcome-heading">Welcome back</h2>
+            </div>
+            <button class="ghost-button" id="logout-button" type="button">Logout</button>
+          </div>
+
+          <div class="stats-grid">
+            <article>
+              <span>Level</span>
+              <strong id="level-value">1</strong>
+            </article>
+            <article>
+              <span>Total XP</span>
+              <strong id="xp-value">0</strong>
+            </article>
+            <article>
+              <span>Campus</span>
+              <strong id="campus-value">Unverified</strong>
+            </article>
+          </div>
+
+          <div class="streak-card">
+            <div>
+              <p class="eyebrow">Daily streak</p>
+              <h3><span id="streak-value">0</span> day streak</h3>
+            </div>
+            <div class="streak-meta">
+              <span id="streak-status">Cold start</span>
+              <small id="streak-date">No qualifying activity yet</small>
+            </div>
+          </div>
+
+          <div class="progress-grid" id="progress-grid"></div>
+
+          <section class="quest-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Quests</p>
+                <h3>Daily and weekly progression</h3>
+              </div>
+            </div>
+            <div id="quest-list"></div>
+          </section>
+
+          <form class="activity-form" id="activity-form">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Activity log</p>
+                <h3>Claim XP for real work</h3>
+              </div>
+            </div>
+            <label>
+              Activity type
+              <select id="activityType" name="activityType"></select>
+            </label>
+            <label>
+              Duration in minutes
+              <input id="durationMinutes" name="durationMinutes" type="number" min="0" value="60" />
+            </label>
+            <label>
+              Notes
+              <textarea id="notes" name="notes" rows="3" placeholder="Library sprint, networking event, gym lift session"></textarea>
+            </label>
+            <button class="primary-button" type="submit">Log activity</button>
+          </form>
+
+          <p class="status-text" id="activity-status"></p>
+
+          <section class="recent-list">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Recent activity</p>
+                <h3>Momentum log</h3>
+              </div>
+            </div>
+            <div id="recent-activities"></div>
+          </section>
+
+          <section class="feed-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">The Quad</p>
+                <h3>Campus feed</h3>
+              </div>
+            </div>
+            <form id="feed-form" class="feed-form">
+              <label>
+                Share your progress
+                <textarea id="feed-body" rows="3" placeholder="Finished a deep work block and stayed locked in."></textarea>
+              </label>
+              <label>
+                Link a recent activity
+                <select id="feed-activity-id"></select>
+              </label>
+              <button class="primary-button" type="submit">Post to campus feed</button>
+            </form>
+            <p class="status-text" id="feed-status"></p>
+            <div id="feed-list"></div>
+          </section>
+
+          <section class="leaderboard-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Competition</p>
+                <h3>Campus leaderboard</h3>
+              </div>
+              <select id="leaderboard-window">
+                <option value="daily">Daily</option>
+                <option value="weekly" selected>Weekly</option>
+                <option value="all_time">All time</option>
+              </select>
+            </div>
+            <div id="leaderboard-list"></div>
+          </section>
+
+          <section class="notification-section">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Notifications</p>
+                <h3>In-app activity center</h3>
+              </div>
+            </div>
+            <div id="notification-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/config.js"></script>
+    <script src="./main.js" type="module"></script>
+  </body>
+</html>

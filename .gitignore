@@ -1,0 +1,18 @@
+services/api/data/db.json
+services/api/data/test-db.json
+.DS_Store
+
+# Dependencies & builds
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.*.local
+
+# Logs & caches
+npm-debug.log*
+.turbo/

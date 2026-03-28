@@ -1,0 +1,6 @@
+{
+  "name": "@campusquest/admin",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dev-server.js"
+}

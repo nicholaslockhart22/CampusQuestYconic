@@ -1,0 +1,6 @@
+.git
+.gitignore
+node_modules
+npm-debug.log
+services/api/data/test-db.json
+.DS_Store

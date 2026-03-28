@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CampusQuest Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" id="login-card">
+        <p class="eyebrow">Admin auth</p>
+        <h1>CampusQuest Operations Console</h1>
+        <p>Use the seeded admin account to manage Sprint 2 quest templates.</p>
+        <p><strong>Default credentials:</strong> `admin@campusquest.local` / `admin123`</p>
+        <form id="admin-login-form">
+          <label>
+            Email
+            <input id="admin-email" type="email" value="admin@campusquest.local" required />
+          </label>
+          <label>
+            Password
+            <input id="admin-password" type="password" value="admin123" required />
+          </label>
+          <button type="submit">Login</button>
+        </form>
+        <p class="status" id="login-status"></p>
+      </section>
+
+      <section class="card hidden" id="admin-card">
+        <div class="header-row">
+          <div>
+            <p class="eyebrow">Quest administration</p>
+            <h1>Quest Template Control</h1>
+          </div>
+          <button id="admin-logout" type="button">Logout</button>
+        </div>
+
+        <div class="grid">
+          <div class="subcard">
+            <h2>Create quest template</h2>
+            <form id="quest-form">
+              <label>
+                Title
+                <input id="quest-title" required />
+              </label>
+              <label>
+                Description
+                <textarea id="quest-description" rows="3" required></textarea>
+              </label>
+              <label>
+                Recurrence
+                <select id="quest-recurrence">
+                  <option value="daily">daily</option>
+                  <option value="weekly">weekly</option>
+                </select>
+              </label>
+              <label>
+                Activity type
+                <select id="quest-activity-type">
+                  <option value="study">study</option>
+                  <option value="workout">workout</option>
+                  <option value="event">event</option>
+                  <option value="club">club</option>
+                  <option value="networking">networking</option>
+                  <option value="any">any</option>
+                </select>
+              </label>
+              <label>
+                Target count
+                <input id="quest-target-count" type="number" min="1" value="1" required />
+              </label>
+              <label>
+                Reward XP
+                <input id="quest-reward-xp" type="number" min="0" value="100" required />
+              </label>
+              <div class="reward-grid">
+                <label><span>Focus</span><input id="reward-focus" type="number" value="0" /></label>
+                <label><span>Knowledge</span><input id="reward-knowledge" type="number" value="0" /></label>
+                <label><span>Strength</span><input id="reward-strength" type="number" value="0" /></label>
+                <label><span>Social</span><input id="reward-social" type="number" value="0" /></label>
+                <label><span>Momentum</span><input id="reward-momentum" type="number" value="0" /></label>
+              </div>
+              <button type="submit">Create quest</button>
+            </form>
+            <p class="status" id="quest-status"></p>
+          </div>
+
+          <div class="subcard">
+            <h2>Current reward rules</h2>
+            <div id="reward-rules"></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="subcard">
+            <h2>Analytics dashboard</h2>
+            <div id="analytics-summary"></div>
+          </div>
+          <div class="subcard">
+            <h2>Support lookup</h2>
+            <form id="support-form">
+              <label>
+                Search users
+                <input id="support-query" placeholder="name or email" />
+              </label>
+              <button type="submit">Search</button>
+            </form>
+            <div id="support-results"></div>
+          </div>
+        </div>
+
+        <div class="subcard">
+          <h2>Quest templates</h2>
+          <div id="quest-templates"></div>
+        </div>
+
+        <div class="subcard">
+          <h2>Moderation queue</h2>
+          <div id="report-queue"></div>
+        </div>
+      </section>
+    </main>
+    <script src="/config.js"></script>
+    <script src="./main.js" type="module"></script>
+  </body>
+</html>
