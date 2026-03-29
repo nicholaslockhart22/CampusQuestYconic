@@ -1,5 +1,5 @@
-import { DashboardScreen } from "@/components/screens/dashboard-screen";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <DashboardScreen />;
+  redirect("/quad");
 }

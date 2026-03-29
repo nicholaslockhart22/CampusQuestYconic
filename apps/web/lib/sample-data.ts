@@ -135,18 +135,42 @@ export function getSampleState(): CampusQuestState {
         rewardClaimed: false
       }
     ],
-    bossBattle: {
-      id: "boss-1",
-      name: "Midterm Hydra",
-      theme: "Three exams in five days",
-      prepProgress: 7,
-      prepGoal: 10,
-      lootPreview: [
-        { name: "Common Notes Cache", rarity: "common" },
-        { name: "Rare Focus Sigil", rarity: "rare" },
-        { name: "Legendary Dean's Favor", rarity: "legendary" }
-      ]
-    },
+    bossBattles: [
+      {
+        id: "boss-1",
+        name: "Midterm Hydra",
+        theme: "Three exams in five days",
+        prepProgress: 7,
+        prepGoal: 10,
+        lootPreview: [
+          { name: "Common Notes Cache", rarity: "common" },
+          { name: "Rare Focus Sigil", rarity: "rare" },
+          { name: "Legendary Dean's Favor", rarity: "legendary" }
+        ]
+      },
+      {
+        id: "boss-2",
+        name: "Finals Archon",
+        theme: "Capstone + two lab finals same week",
+        prepProgress: 3,
+        prepGoal: 12,
+        lootPreview: [
+          { name: "Archon Index Cards", rarity: "uncommon" },
+          { name: "Caffeinated Elixir", rarity: "rare" }
+        ]
+      },
+      {
+        id: "boss-3",
+        name: "Career Fair Golem",
+        theme: "Resume polish + employer queue stamina",
+        prepProgress: 0,
+        prepGoal: 6,
+        lootPreview: [
+          { name: "Business Card Stack", rarity: "common" },
+          { name: "Recruiter's Respect", rarity: "legendary" }
+        ]
+      }
+    ],
     feed: [
       {
         id: "f1",
@@ -165,6 +189,44 @@ export function getSampleState(): CampusQuestState {
         category: "Social",
         confirmations: 8,
         timestamp: "44m ago"
+      },
+      {
+        id: "f3",
+        author: "URI Rec Sports",
+        title: "Intramural signup week",
+        body: "Volleyball and 5v5 soccer slots are open—grab a team before Friday.",
+        category: "Campus",
+        confirmations: 24,
+        timestamp: "2h ago"
+      }
+    ],
+    feedFollowing: [
+      {
+        id: "ff1",
+        author: "Sam Kingston",
+        title: "Morning lift PR",
+        body: "New squat max at Keaney before my 9 a.m. Never thought I'd be that person.",
+        category: "Strength",
+        confirmations: 6,
+        timestamp: "18m ago"
+      },
+      {
+        id: "ff2",
+        author: "Riley Chen",
+        title: "Lab report submitted",
+        body: "Finally shipped bio lab. Celebrating with ramen at the Union.",
+        category: "Knowledge",
+        confirmations: 9,
+        timestamp: "1h ago"
+      },
+      {
+        id: "ff3",
+        author: "Dev Moore",
+        title: "Hack night build",
+        body: "Shipped a rough prototype for our capstone demo. Sleep is tomorrow's problem.",
+        category: "Focus",
+        confirmations: 14,
+        timestamp: "3h ago"
       }
     ],
     inventory: [

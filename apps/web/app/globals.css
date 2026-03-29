@@ -11,26 +11,10 @@ html {
 }
 
 body {
-  @apply bg-uri-mist text-uri-ink antialiased;
-  background-image:
-    radial-gradient(circle at 0% 0%, rgba(214, 228, 255, 0.8), transparent 25%),
-    radial-gradient(circle at 100% 0%, rgba(203, 161, 53, 0.24), transparent 22%),
-    linear-gradient(180deg, #f8fbff 0%, #edf3fb 100%);
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(11, 31, 65, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(11, 31, 65, 0.03) 1px, transparent 1px);
-  background-size: 26px 26px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 88%);
+  @apply bg-cq-deep text-cq-navy antialiased;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(11, 31, 65, 0.24) transparent;
+  scrollbar-color: rgba(107, 184, 232, 0.45) rgba(11, 31, 65, 0.35);
 }

@@ -7,7 +7,7 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-[28px] border border-white/80 bg-white/80 p-6 shadow-card backdrop-blur ${className}`}
+      className={`rounded-2xl border border-cq-keaney/35 bg-cq-white p-6 shadow-cq-card backdrop-blur-sm ${className}`}
     >
       {children}
     </section>

@@ -118,8 +118,12 @@ export interface CampusQuestState {
   profile: CharacterProfile;
   activities: ActivityLog[];
   quests: Quest[];
-  bossBattle: BossBattle;
+  /** Active boss prep tracks; legacy saves may only have `bossBattle` */
+  bossBattles: BossBattle[];
+  /** Campus-wide discovery feed */
   feed: FeedPost[];
+  /** People you follow (classmates & guildmates) */
+  feedFollowing: FeedPost[];
   inventory: InventoryItem[];
   leaderboard: LeaderboardEntry[];
   notifications: NotificationItem[];

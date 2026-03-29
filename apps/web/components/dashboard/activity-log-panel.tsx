@@ -56,10 +56,10 @@ export function ActivityLogPanel({
 
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-2 text-sm font-medium text-uri-ink">
+          <label className="grid gap-2 text-sm font-medium text-cq-navy">
             Activity type
             <select
-              className="rounded-2xl border border-uri-navy/12 bg-white px-4 py-3"
+              className="rounded-2xl border border-cq-keaney/40 bg-cq-keaneyIce/50 px-4 py-3 text-cq-navy focus:border-cq-keaney focus:outline-none focus:ring-2 focus:ring-cq-keaney/40"
               value={activityType}
               onChange={(event) => setActivityType(event.target.value as ActivityType)}
             >
@@ -71,10 +71,10 @@ export function ActivityLogPanel({
             </select>
           </label>
 
-          <label className="grid gap-2 text-sm font-medium text-uri-ink">
+          <label className="grid gap-2 text-sm font-medium text-cq-navy">
             Duration
             <input
-              className="rounded-2xl border border-uri-navy/12 bg-white px-4 py-3"
+              className="rounded-2xl border border-cq-keaney/40 bg-cq-keaneyIce/50 px-4 py-3 text-cq-navy focus:border-cq-keaney focus:outline-none focus:ring-2 focus:ring-cq-keaney/40"
               min={5}
               step={5}
               type="number"
@@ -84,10 +84,10 @@ export function ActivityLogPanel({
           </label>
         </div>
 
-        <label className="grid gap-2 text-sm font-medium text-uri-ink">
+        <label className="grid gap-2 text-sm font-medium text-cq-navy">
           Notes
           <textarea
-            className="min-h-28 rounded-2xl border border-uri-navy/12 bg-white px-4 py-3"
+            className="min-h-28 rounded-2xl border border-cq-keaney/40 bg-cq-keaneyIce/50 px-4 py-3 text-cq-navy focus:border-cq-keaney focus:outline-none focus:ring-2 focus:ring-cq-keaney/40"
             placeholder="What did you finish, attend, or improve?"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
@@ -96,12 +96,12 @@ export function ActivityLogPanel({
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <button
-            className="rounded-full bg-uri-navy px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#17386e]"
+            className="rounded-full bg-cq-navy px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-cq-navyLight"
             type="submit"
           >
             Log activity
           </button>
-          <p className="text-sm text-uri-navy/62">{rewardMessage}</p>
+          <p className="text-sm text-ig-secondary">{rewardMessage}</p>
         </div>
       </form>
     </Card>

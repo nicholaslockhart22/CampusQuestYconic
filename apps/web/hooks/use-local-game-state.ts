@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import { applyXpGain, rankForPlayer, syncLeaderboard } from "@/lib/game-logic";
 import { getSampleState } from "@/lib/sample-data";
 import { loadState, saveState } from "@/lib/storage";
-import type { ActivityLog, CampusQuestState, CharacterProfile, StatBlock } from "@/lib/types";
+import type {
+  ActivityLog,
+  BossBattle,
+  CampusQuestState,
+  CharacterProfile,
+  FeedPost,
+  StatBlock
+} from "@/lib/types";
+
+type RawPersisted = Partial<CampusQuestState> & { bossBattle?: BossBattle };
 
 const defaultGuilds = getSampleState().guilds;
 
@@ -18,14 +27,28 @@ function mergeStats(base: StatBlock, delta: Partial<StatBlock>): StatBlock {
   };
 }
 
-function normalizeLoadedState(raw: CampusQuestState): CampusQuestState {
+function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuestState {
+  const legacy = raw as RawPersisted;
+  const bossBattles =
+    Array.isArray(legacy.bossBattles) && legacy.bossBattles.length > 0
+      ? legacy.bossBattles
+      : legacy.bossBattle
+        ? [legacy.bossBattle]
+        : getSampleState().bossBattles;
+
+  const base = raw as CampusQuestState;
   return {
-    ...raw,
-    quests: raw.quests.map((quest) => ({
+    ...base,
+    quests: (base.quests || []).map((quest) => ({
       ...quest,
       rewardClaimed: quest.rewardClaimed ?? false
     })),
-    guilds: raw.guilds?.length ? raw.guilds : defaultGuilds
+    guilds: base.guilds?.length ? base.guilds : defaultGuilds,
+    bossBattles,
+    feedFollowing:
+      Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
+        ? base.feedFollowing
+        : getSampleState().feedFollowing
   };
 }
 
@@ -83,11 +106,22 @@ export function useLocalGameState() {
         return { ...quest, progress: Math.min(quest.goal, quest.progress + 1) };
       });
 
-      const prevPrep = current.bossBattle.prepProgress;
-      const prepGoal = current.bossBattle.prepGoal;
-      const newPrep = Math.min(prepGoal, prevPrep + 1);
-      const bossBattle = { ...current.bossBattle, prepProgress: newPrep };
-      const prepComplete = newPrep >= prepGoal && prevPrep < prepGoal;
+      const bossBattles = current.bossBattles.map((b) => ({ ...b }));
+      const activeIdx = bossBattles.findIndex((b) => b.prepProgress < b.prepGoal);
+      let prepComplete = false;
+      let completedBossName = "";
+      let prepLine = "";
+      if (activeIdx >= 0) {
+        const b = bossBattles[activeIdx];
+        const prevPrep = b.prepProgress;
+        const newPrep = Math.min(b.prepGoal, prevPrep + 1);
+        bossBattles[activeIdx] = { ...b, prepProgress: newPrep };
+        prepComplete = newPrep >= b.prepGoal && prevPrep < b.prepGoal;
+        completedBossName = b.name;
+        prepLine = `${newPrep}/${b.prepGoal} on ${b.name}`;
+      } else {
+        prepLine = "All bosses primed";
+      }
 
       const leaderboard = syncLeaderboard(current.leaderboard, profile);
       const rank = rankForPlayer(leaderboard, profile.name);
@@ -97,7 +131,7 @@ export function useLocalGameState() {
         {
           id: `n-${Date.now()}`,
           title: `${activity.title} logged`,
-          body: `You earned ${activity.xpReward} XP. Boss prep ${newPrep}/${prepGoal}.`,
+          body: `You earned ${activity.xpReward} XP. ${prepLine}.`,
           createdAt: "just now",
           read: false
         },
@@ -106,7 +140,7 @@ export function useLocalGameState() {
               {
                 id: `n-boss-${Date.now()}`,
                 title: "Boss prep complete",
-                body: `${bossBattle.name} is fully primed. Claim your advantage before the battle window.`,
+                body: `${completedBossName} is fully primed. Open Battle to claim your edge.`,
                 createdAt: "just now",
                 read: false
               }
@@ -119,7 +153,7 @@ export function useLocalGameState() {
         profile: rankedProfile,
         activities: [activity, ...current.activities],
         quests: nextQuests,
-        bossBattle,
+        bossBattles,
         leaderboard,
         notifications: [...topNotifications, ...current.notifications]
       };
@@ -185,8 +219,59 @@ export function useLocalGameState() {
       ...current,
       feed: current.feed.map((post) =>
         post.id === postId ? { ...post, confirmations: post.confirmations + 1 } : post
+      ),
+      feedFollowing: current.feedFollowing.map((post) =>
+        post.id === postId ? { ...post, confirmations: post.confirmations + 1 } : post
       )
     }));
+  }
+
+  function addFeedPost(payload: {
+    title: string;
+    body: string;
+    category: string;
+    audience: "foryou" | "friends";
+  }) {
+    const title = payload.title.trim() || "Quad update";
+    const body = payload.body.trim();
+    if (!body) {
+      return;
+    }
+    const post: FeedPost = {
+      id: `f-user-${Date.now()}`,
+      author: "",
+      title,
+      body,
+      category: payload.category.trim() || "Campus",
+      confirmations: 0,
+      timestamp: "just now"
+    };
+
+    setState((current) => {
+      const withAuthor = { ...post, author: current.profile.name };
+      const isFriends = payload.audience === "friends";
+      const notif = isFriends
+        ? {
+            id: `n-post-${Date.now()}`,
+            title: "Shared with friends",
+            body: "Your update is on the Following feed.",
+            createdAt: "just now" as const,
+            read: false as const
+          }
+        : {
+            id: `n-post-${Date.now()}`,
+            title: "Posted to the Quad",
+            body: "Your update is live on For you.",
+            createdAt: "just now" as const,
+            read: false as const
+          };
+      return {
+        ...current,
+        feed: isFriends ? current.feed : [withAuthor, ...current.feed],
+        feedFollowing: isFriends ? [withAuthor, ...current.feedFollowing] : current.feedFollowing,
+        notifications: [notif, ...current.notifications]
+      };
+    });
   }
 
   function updateProfile(patch: Partial<Pick<CharacterProfile, "name" | "bio" | "avatarClass">>) {
@@ -208,6 +293,7 @@ export function useLocalGameState() {
     claimQuestReward,
     markNotificationRead,
     confirmFeedPost,
+    addFeedPost,
     updateProfile
   };
 }

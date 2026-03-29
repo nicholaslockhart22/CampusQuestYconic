@@ -31,7 +31,9 @@ export function DashboardScreen() {
         </div>
 
         <div className="space-y-6">
-          <BossBattlePanel boss={state.bossBattle} />
+          {state.bossBattles.map((boss) => (
+            <BossBattlePanel key={boss.id} boss={boss} />
+          ))}
           <LeaderboardPanel entries={state.leaderboard} />
           <InventoryPanel items={state.inventory} />
           <NotificationsPanel
