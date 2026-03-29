@@ -2,16 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { GuildInsightModal } from "@/components/screens/guild-insight-modal";
 import {
+  FRIENDS_GUILD_BY_ID,
   friendsGuildCategoryOrder,
   friendsGuildMatchesQuery,
   friendsGuildsByCategory,
   type FriendsGuildCategory,
-  type FriendsScreenGuild,
-  type FriendsScreenGuildMember
+  type FriendsScreenGuild
 } from "@/lib/friends-screen-guilds";
 
 const FRIENDS_KEY = "campusquest-friends-v1";
+const GUILD_MEMBERSHIPS_KEY = "campusquest-guild-memberships-v1";
+const MAX_GUILD_MEMBERSHIPS = 3;
 
 type FriendRow = { id: string; name: string; handle: string };
 
@@ -56,16 +59,75 @@ function saveFriends(list: FriendRow[]) {
   window.localStorage.setItem(FRIENDS_KEY, JSON.stringify(list));
 }
 
+function loadGuildMemberships(): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(GUILD_MEMBERSHIPS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const ids = parsed.filter((id): id is string => typeof id === "string");
+    const valid = ids.filter((id) => FRIENDS_GUILD_BY_ID.has(id));
+    return valid.slice(0, MAX_GUILD_MEMBERSHIPS);
+  } catch {
+    return [];
+  }
+}
+
+function saveGuildMemberships(ids: string[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(GUILD_MEMBERSHIPS_KEY, JSON.stringify(ids));
+}
+
 export function FriendsSocialScreen() {
   const [friends, setFriends] = useState<FriendRow[]>([]);
   const [suggestions, setSuggestions] = useState(SUGGESTIONS);
   const [friendSearch, setFriendSearch] = useState("");
   const [guildSearch, setGuildSearch] = useState("");
-  const [expandedGuildId, setExpandedGuildId] = useState<string | null>(null);
+  const [guildDetailId, setGuildDetailId] = useState<string | null>(null);
+  const [joinedGuildIds, setJoinedGuildIds] = useState<string[]>([]);
+  const [guildToast, setGuildToast] = useState<string | null>(null);
 
   useEffect(() => {
     setFriends(loadFriends());
+    const guildIds = loadGuildMemberships();
+    setJoinedGuildIds(guildIds);
+    saveGuildMemberships(guildIds);
   }, []);
+
+  useEffect(() => {
+    if (!guildToast) return;
+    const t = window.setTimeout(() => setGuildToast(null), 3200);
+    return () => window.clearTimeout(t);
+  }, [guildToast]);
+
+  function showGuildToast(message: string) {
+    setGuildToast(message);
+  }
+
+  function joinGuild(guildId: string) {
+    if (joinedGuildIds.includes(guildId)) return;
+    if (joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS) {
+      showGuildToast("You're in 3 guilds. Leave one to join another.");
+      return;
+    }
+    const next = [...joinedGuildIds, guildId];
+    setJoinedGuildIds(next);
+    saveGuildMemberships(next);
+    showGuildToast("You're in this guild now.");
+  }
+
+  function leaveGuild(guildId: string) {
+    if (!joinedGuildIds.includes(guildId)) return;
+    const next = joinedGuildIds.filter((id) => id !== guildId);
+    setJoinedGuildIds(next);
+    saveGuildMemberships(next);
+    showGuildToast("You left the guild.");
+  }
 
   const filteredFriends = useMemo(
     () => friends.filter((f) => friendMatchesQuery(f, friendSearch)),
@@ -97,6 +159,11 @@ export function FriendsSocialScreen() {
     [categoryOrder, filteredGuildsByCategory]
   );
 
+  const guildDetail = useMemo(
+    () => (guildDetailId ? FRIENDS_GUILD_BY_ID.get(guildDetailId) ?? null : null),
+    [guildDetailId]
+  );
+
   function addFriend(row: FriendRow) {
     if (friends.some((f) => f.id === row.id)) {
       return;
@@ -105,6 +172,19 @@ export function FriendsSocialScreen() {
     setFriends(next);
     saveFriends(next);
     setSuggestions((s) => s.filter((x) => x.id !== row.id));
+  }
+
+  function removeFriend(row: FriendRow) {
+    const next = friends.filter((f) => f.id !== row.id);
+    setFriends(next);
+    saveFriends(next);
+    const preset = SUGGESTIONS.find((s) => s.id === row.id);
+    if (preset) {
+      setSuggestions((s) => {
+        if (s.some((x) => x.id === preset.id)) return s;
+        return [...s, preset].sort((a, b) => a.name.localeCompare(b.name));
+      });
+    }
   }
 
   return (
@@ -159,7 +239,14 @@ export function FriendsSocialScreen() {
                     <p className="text-xs text-ig-secondary">{f.handle}</p>
                   </div>
                 </div>
-                <span className="text-xs font-semibold text-cq-keaney">Friends</span>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg border border-cq-keaney/40 bg-cq-white px-3 py-1.5 text-xs font-bold text-cq-navy hover:bg-red-50 hover:border-red-200 hover:text-red-800"
+                  aria-label={`Remove ${f.name} from friends`}
+                  onClick={() => removeFriend(f)}
+                >
+                  Remove
+                </button>
               </li>
             ))}
           </ul>
@@ -205,6 +292,33 @@ export function FriendsSocialScreen() {
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-cq-keaney">Guilds</h2>
+        <p className="mb-2 px-1 text-xs text-ig-secondary">
+          Join up to {MAX_GUILD_MEMBERSHIPS} guilds. You can leave anytime to free a slot.
+        </p>
+        <div className="mb-3 rounded-xl border border-cq-keaney/35 bg-cq-keaneyIce/50 px-3 py-2 shadow-sm">
+          <p className="text-xs font-bold text-cq-navy">
+            Your guilds: {joinedGuildIds.length}/{MAX_GUILD_MEMBERSHIPS}
+          </p>
+          {joinedGuildIds.length > 0 ? (
+            <ul className="mt-1.5 space-y-0.5 text-[11px] text-ig-secondary">
+              {joinedGuildIds.map((id) => {
+                const g = FRIENDS_GUILD_BY_ID.get(id);
+                return <li key={id}>{g ? g.name : id}</li>;
+              })}
+            </ul>
+          ) : (
+            <p className="mt-1 text-[11px] text-ig-secondary">None yet — tap Join on a guild below.</p>
+          )}
+        </div>
+        {guildToast ? (
+          <p
+            className="mb-2 rounded-lg border border-cq-keaney/40 bg-cq-white px-3 py-2 text-xs font-semibold text-cq-navy shadow-sm"
+            role="status"
+            aria-live="polite"
+          >
+            {guildToast}
+          </p>
+        ) : null}
         <label className="mb-3 block rounded-xl border border-cq-keaney/30 bg-cq-white px-3 py-3 shadow-sm">
           <span className="text-xs font-bold uppercase tracking-wide text-cq-keaney">Find guilds</span>
           <div className="relative mt-2">
@@ -239,9 +353,18 @@ export function FriendsSocialScreen() {
                     <FriendsGuildCard
                       key={guild.id}
                       guild={guild}
-                      expanded={expandedGuildId === guild.id}
-                      onToggleView={() =>
-                        setExpandedGuildId((id) => (id === guild.id ? null : guild.id))
+                      isJoined={joinedGuildIds.includes(guild.id)}
+                      joinDisabled={
+                        !joinedGuildIds.includes(guild.id) &&
+                        joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS
+                      }
+                      onViewGuild={() => setGuildDetailId(guild.id)}
+                      onJoin={() => joinGuild(guild.id)}
+                      onLeave={() => leaveGuild(guild.id)}
+                      onRequestInvite={() =>
+                        joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS
+                          ? showGuildToast("You're in 3 guilds. Leave one to request invites elsewhere.")
+                          : showGuildToast("Invite request sent to guild leaders (preview).")
                       }
                     />
                   ))}
@@ -251,23 +374,37 @@ export function FriendsSocialScreen() {
           })}
         </div>
       </section>
+
+      <GuildInsightModal guild={guildDetail} onClose={() => setGuildDetailId(null)} />
     </div>
   );
 }
 
 function FriendsGuildCard({
   guild,
-  expanded,
-  onToggleView
+  isJoined,
+  joinDisabled,
+  onViewGuild,
+  onJoin,
+  onLeave,
+  onRequestInvite
 }: {
   guild: FriendsScreenGuild;
-  expanded: boolean;
-  onToggleView: () => void;
+  isJoined: boolean;
+  joinDisabled: boolean;
+  onViewGuild: () => void;
+  onJoin: () => void;
+  onLeave: () => void;
+  onRequestInvite: () => void;
 }) {
   const memberLabel = `${guild.members.length}/${guild.memberCap} members`;
 
   return (
-    <Card className="border-cq-keaney/40 bg-gradient-to-br from-cq-white to-cq-keaneyIce/30 shadow-sm">
+    <Card
+      className={`border-cq-keaney/40 bg-gradient-to-br from-cq-white to-cq-keaneyIce/30 shadow-sm ${
+        isJoined ? "ring-2 ring-cq-keaney/60" : ""
+      }`}
+    >
       <div className="flex items-start gap-2">
         {guild.emoji ? (
           <span className="text-2xl leading-none" aria-hidden>
@@ -285,6 +422,9 @@ function FriendsGuildCard({
             <span className="font-medium text-cq-navy/80">{memberLabel}</span>
           </div>
           <p className="mt-2 text-sm leading-snug text-ig-secondary">{guild.questDescription}</p>
+          {isJoined ? (
+            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-cq-keaney">You&apos;re in this guild</p>
+          ) : null}
         </div>
       </div>
 
@@ -292,79 +432,43 @@ function FriendsGuildCard({
         <button
           type="button"
           className="rounded-lg border border-cq-keaney/50 bg-cq-white py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce"
-          aria-expanded={expanded}
-          onClick={onToggleView}
+          onClick={onViewGuild}
         >
-          {expanded ? "Hide members" : "View Guild"}
+          View Guild
         </button>
+        {isJoined ? (
+          <button
+            type="button"
+            className="rounded-lg border border-red-200 bg-red-50 py-2 text-sm font-bold text-red-800 shadow-sm hover:bg-red-100"
+            onClick={onLeave}
+          >
+            Leave
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={joinDisabled}
+            title={
+              joinDisabled
+                ? `You can only join ${MAX_GUILD_MEMBERSHIPS} guilds at a time`
+                : undefined
+            }
+            className="rounded-lg bg-cq-navy py-2 text-sm font-bold text-white shadow-sm hover:bg-cq-navyLight disabled:cursor-not-allowed disabled:opacity-45"
+            onClick={onJoin}
+          >
+            Join
+          </button>
+        )}
         <button
           type="button"
-          className="rounded-lg bg-cq-navy py-2 text-sm font-bold text-white shadow-sm hover:bg-cq-navyLight"
-        >
-          Join
-        </button>
-        <button
-          type="button"
-          className="rounded-lg border border-cq-keaney/45 bg-cq-keaneyIce/50 py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce"
+          disabled={isJoined}
+          className="rounded-lg border border-cq-keaney/45 bg-cq-keaneyIce/50 py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={onRequestInvite}
         >
           Request Invite
         </button>
       </div>
-
-      {expanded ? (
-        <div className="mt-3 rounded-xl border border-cq-keaney/25 bg-cq-white/80 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-cq-keaney">Members</p>
-          <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
-            {sortMembersForDisplay(guild.members).map((mem) => (
-              <li
-                key={mem.id}
-                className="flex items-center justify-between gap-2 rounded-lg bg-cq-keaneyIce/40 px-2 py-1.5"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cq-keaneyBright to-cq-navy text-xs font-bold text-white">
-                    {mem.name[0]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-cq-navy">{mem.name}</p>
-                    {mem.handle ? (
-                      <p className="truncate text-[11px] text-ig-secondary">@{mem.handle}</p>
-                    ) : null}
-                  </div>
-                </div>
-                <RoleBadge role={mem.role} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </Card>
-  );
-}
-
-function sortMembersForDisplay(members: FriendsScreenGuildMember[]): FriendsScreenGuildMember[] {
-  const order = { founder: 0, cofounder: 1, member: 2 };
-  return [...members].sort((a, b) => order[a.role] - order[b.role]);
-}
-
-function RoleBadge({ role }: { role: FriendsScreenGuildMember["role"] }) {
-  if (role === "founder") {
-    return (
-      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
-        Founder
-      </span>
-    );
-  }
-  if (role === "cofounder") {
-    return (
-      <span className="shrink-0 rounded-md bg-cq-keaneySoft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cq-navy">
-        Co-founder
-      </span>
-    );
-  }
-  return (
-    <span className="shrink-0 rounded-md bg-cq-white px-1.5 py-0.5 text-[10px] font-semibold text-ig-secondary ring-1 ring-cq-keaney/20">
-      Member
-    </span>
   );
 }
 

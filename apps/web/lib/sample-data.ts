@@ -255,7 +255,7 @@ export function getSampleState(): CampusQuestState {
         title: "Library until midnight",
         body: "Carrels on 4th floor hit different when the whole row is in grind mode. Shout-out to whoever brought the quiet snacks.",
         category: "Study",
-        imageUrl: "/feed/library-night.svg",
+        imageUrl: "/feed/library-carothers.png",
         ramarks: ["library", "finals"],
         reactions: { nod: 9, hype: 6, verify: 2, assist: 1 },
         timestamp: "8h ago",

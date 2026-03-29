@@ -9,6 +9,22 @@ export interface FriendsScreenGuildMember {
   handle?: string;
 }
 
+/** Stats shown in the Friends “View Guild” insight modal. */
+export interface FriendsGuildInsight {
+  /** XP earned toward the next guild level in the current bar. */
+  guildXpIntoLevel: number;
+  /** XP required on this bar to level the guild. */
+  guildXpToNext: number;
+  guildNextLevel: number;
+  guildTotalXp: number;
+  xpPerLevel: number;
+  bossesDefeated: number;
+  finalBossesDefeated: number;
+  featuredFounderName: string;
+  /** Without @ */
+  featuredFounderHandle: string;
+}
+
 export interface FriendsScreenGuild {
   id: string;
   emoji?: string;
@@ -19,6 +35,7 @@ export interface FriendsScreenGuild {
   memberCap: number;
   questDescription: string;
   members: FriendsScreenGuildMember[];
+  insight: FriendsGuildInsight;
 }
 
 const CATEGORY_ORDER: FriendsGuildCategory[] = ["Study", "Fitness", "Networking", "Clubs"];
@@ -32,6 +49,30 @@ function m(
   return { id, name, role, handle };
 }
 
+function gi(
+  guildXpIntoLevel: number,
+  guildXpToNext: number,
+  guildNextLevel: number,
+  guildTotalXp: number,
+  xpPerLevel: number,
+  bossesDefeated: number,
+  finalBossesDefeated: number,
+  featuredFounderName: string,
+  featuredFounderHandle: string
+): FriendsGuildInsight {
+  return {
+    guildXpIntoLevel,
+    guildXpToNext,
+    guildNextLevel,
+    guildTotalXp,
+    xpPerLevel,
+    bossesDefeated,
+    finalBossesDefeated,
+    featuredFounderName,
+    featuredFounderHandle
+  };
+}
+
 /** Guild directory shown only on the Friends screen (not global game state). */
 export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
   {
@@ -41,13 +82,14 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 4,
     memberCap: 100,
     questDescription: "Log 20 study sessions as a guild",
+    insight: gi(0, 100, 5, 300, 100, 0, 0, "Reese Simmons", "reese_simmons_26"),
     members: [
-      m("fg-ll-1", "Priya Nair", "founder", "priya.uri"),
+      m("fg-ll-1", "Reese Simmons", "founder", "reese_simmons_26"),
       m("fg-ll-2", "Daniel Ortiz", "cofounder", "dan_o"),
       m("fg-ll-3", "Avery Rhody", "member", "avery_rhody"),
       m("fg-ll-4", "Casey Lee", "member", "casey_lee"),
       m("fg-ll-5", "Jordan Kim", "member", "jordan_kim"),
-      m("fg-ll-6", "Samira Haddad", "member", "samira.h"),
+      m("fg-ll-6", "Priya Nair", "member", "priya.uri"),
       m("fg-ll-7", "Chris Okonkwo", "member", "chris_ok"),
       m("fg-ll-8", "Lin Wei", "member", "linwei.uri"),
       m("fg-ll-9", "Hannah Brooks", "member", "h_brooks"),
@@ -63,6 +105,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 2,
     memberCap: 100,
     questDescription: "10 group study activities",
+    insight: gi(52, 80, 3, 232, 80, 2, 0, "Taylor Brooks", "taylor_b"),
     members: [
       m("fg-an-1", "Taylor Brooks", "founder", "taylor_b"),
       m("fg-an-2", "Morgan Ellis", "cofounder", "morgan_e"),
@@ -86,6 +129,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 5,
     memberCap: 100,
     questDescription: "30 gym or run logs combined",
+    insight: gi(78, 120, 6, 578, 120, 5, 1, "Jordan Keaney", "jkeaney"),
     members: [
       m("fg-rr-1", "Jordan Keaney", "founder", "jkeaney"),
       m("fg-rr-2", "Alex Rivera", "cofounder", "alex_rivera"),
@@ -112,6 +156,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 3,
     memberCap: 100,
     questDescription: "Every member logs 1 workout",
+    insight: gi(24, 80, 4, 244, 80, 0, 0, "Alex Rivera", "alex_rivera"),
     members: [
       m("fg-kf-1", "Alex Rivera", "founder", "alex_rivera"),
       m("fg-kf-2", "Sam Kingston", "cofounder", "sam.uri")
@@ -125,6 +170,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 3,
     memberCap: 100,
     questDescription: "Attend 1 career event (any member)",
+    insight: gi(30, 90, 4, 210, 90, 1, 0, "Casey Ruiz", "casey.uri"),
     members: [
       m("fg-cq-1", "Casey Ruiz", "founder", "casey.uri"),
       m("fg-cq-2", "Emma Hall", "cofounder", "emma_hall"),
@@ -140,6 +186,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 2,
     memberCap: 100,
     questDescription: "5 networking activities",
+    insight: gi(18, 70, 3, 118, 70, 0, 0, "Noah Kingston", "noah_k"),
     members: [
       m("fg-lr-1", "Noah Kingston", "founder", "noah_k"),
       m("fg-lr-2", "Mia Rhody", "cofounder", "mia_rhody"),
@@ -156,6 +203,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 6,
     memberCap: 100,
     questDescription: "12 club or social activities",
+    insight: gi(95, 150, 7, 695, 150, 3, 1, "Mia Rhody", "mia_rhody"),
     members: [
       m("fg-qs-1", "Mia Rhody", "founder", "mia_rhody"),
       m("fg-qs-2", "Casey Ruiz", "cofounder", "casey.uri"),
@@ -179,6 +227,7 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     level: 4,
     memberCap: 100,
     questDescription: "Everyone posts 1 Field Note",
+    insight: gi(40, 100, 5, 340, 100, 2, 0, "Noah Kingston", "noah_k"),
     members: [
       m("fg-cc-1", "Noah Kingston", "founder", "noah_k"),
       m("fg-cc-2", "Emma Hall", "cofounder", "emma_hall"),
@@ -196,6 +245,10 @@ export const FRIENDS_SCREEN_GUILDS: FriendsScreenGuild[] = [
     ]
   }
 ];
+
+export const FRIENDS_GUILD_BY_ID = new Map<string, FriendsScreenGuild>(
+  FRIENDS_SCREEN_GUILDS.map((g) => [g.id, g])
+);
 
 export function friendsGuildsByCategory(): Record<FriendsGuildCategory, FriendsScreenGuild[]> {
   const map: Record<FriendsGuildCategory, FriendsScreenGuild[]> = {
