@@ -139,6 +139,28 @@ export interface InventoryItem {
   source: string;
 }
 
+/** Brief top-of-screen toast after logging an activity (not persisted) */
+export interface ActivityLogBanner {
+  id: number;
+  activityTitle: string;
+  xpReward: number;
+  /** e.g. "+5 Knowledge, +2 Focus" */
+  statsText?: string;
+  /** Boss prep line or guidance */
+  detailLine?: string;
+}
+
+/** Shown after a boss hits 0 HP — loot chest then reward breakdown */
+export interface BossVictoryPending {
+  id: string;
+  bossName: string;
+  activityTitle: string;
+  activityType: ActivityType;
+  xpReward: number;
+  statDelta: Partial<StatBlock>;
+  lootItem: InventoryItem;
+}
+
 export interface LeaderboardEntry {
   id: string;
   name: string;
@@ -215,4 +237,8 @@ export interface CampusQuestState {
   campusRaidWeekKey: string;
   /** Campus raid: XP toward the weekly pool per display name (from activity logs) */
   campusRaidContributions: Record<string, number>;
+  /** Full-screen loot celebration after defeating the active boss; cleared when dismissed */
+  pendingBossVictory: BossVictoryPending | null;
+  /** Transient toast when an activity is logged; cleared by UI timeout */
+  activityLogBanner: ActivityLogBanner | null;
 }

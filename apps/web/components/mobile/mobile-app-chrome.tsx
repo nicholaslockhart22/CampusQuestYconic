@@ -1,7 +1,9 @@
 "use client";
 
+import { ActivityLogBannerStrip } from "@/components/mobile/activity-log-banner-strip";
 import { BottomTabBar } from "@/components/mobile/bottom-tab-bar";
 import { TopToolbar } from "@/components/mobile/top-toolbar";
+import { BossVictoryOverlay } from "@/components/overlays/boss-victory-overlay";
 
 export function MobileAppChrome({ children }: { children: React.ReactNode }) {
   return (
@@ -15,9 +17,11 @@ export function MobileAppChrome({ children }: { children: React.ReactNode }) {
       />
       <TopToolbar />
       <main className="relative mx-auto max-w-lg overflow-x-hidden rounded-t-[1.75rem] border-x border-t border-cq-keaney/35 bg-cq-white shadow-cq-glow px-0 pb-[calc(4.5rem+env(safe-area-inset-bottom,0))] pt-[calc(3.5rem+env(safe-area-inset-top,0))]">
+        <ActivityLogBannerStrip />
         {children}
       </main>
       <BottomTabBar />
+      <BossVictoryOverlay />
     </div>
   );
 }

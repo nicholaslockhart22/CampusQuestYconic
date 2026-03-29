@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { activityPrimaryStat } from "@/lib/activity-primary-stat";
 import { localDateKey, localMondayDateKey } from "@/lib/calendar-local";
 import { clearSession, getSession } from "@/lib/campus-auth";
@@ -9,11 +9,13 @@ import { createFreshGameState } from "@/lib/fresh-game-state";
 import { resolveFeedImageUrl } from "@/lib/feed-image-url";
 import { EMPTY_REACTIONS, normalizeFeedPost } from "@/lib/post-reactions";
 import { formatStatDeltaLine } from "@/lib/activity-stat-deltas";
+import { rollBossLootItem } from "@/lib/boss-victory-loot";
 import { getSampleState } from "@/lib/sample-data";
 import { getGameStorageKey, loadState, saveState } from "@/lib/storage";
 import type {
   ActivityLog,
   BossBattle,
+  BossVictoryPending,
   BossWeakness,
   CampusQuestState,
   CharacterProfile,
@@ -55,6 +57,33 @@ function ensureStatBlock(raw: Partial<StatBlock> | StatBlock | undefined): StatB
     social: Math.max(0, Math.round(Number(raw?.social) || 0)),
     focus: Math.max(0, Math.round(Number(raw?.focus) || 0))
   };
+}
+
+function normalizePendingBossVictory(raw: unknown): BossVictoryPending | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const loot = o.lootItem;
+  if (
+    typeof o.id !== "string" ||
+    typeof o.bossName !== "string" ||
+    typeof o.activityTitle !== "string" ||
+    typeof o.activityType !== "string" ||
+    typeof o.xpReward !== "number" ||
+    !loot ||
+    typeof loot !== "object"
+  ) {
+    return null;
+  }
+  const L = loot as Record<string, unknown>;
+  if (
+    typeof L.id !== "string" ||
+    typeof L.name !== "string" ||
+    typeof L.rarity !== "string" ||
+    typeof L.source !== "string"
+  ) {
+    return null;
+  }
+  return raw as BossVictoryPending;
 }
 
 const MAX_RECRUITED_BOSSES = 4;
@@ -287,7 +316,9 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     directMessageThreads:
       Array.isArray(base.directMessageThreads) && base.directMessageThreads.length > 0
         ? base.directMessageThreads
-        : getSampleState().directMessageThreads
+        : getSampleState().directMessageThreads,
+    pendingBossVictory: normalizePendingBossVictory(base.pendingBossVictory),
+    activityLogBanner: null
   };
 }
 
@@ -356,6 +387,10 @@ export function useLocalGameState() {
 
   function logActivity(activity: ActivityLog) {
     setState((current) => {
+      const ts = Date.now();
+      let nextInventory = current.inventory;
+      let nextPendingVictory: BossVictoryPending | null = current.pendingBossVictory ?? null;
+
       const grown = applyXpGain(current.profile, activity.xpReward);
       const stats = mergeStats(ensureStatBlock(grown.stats), activity.statDelta);
       const profile = { ...grown, streakDays: grown.streakDays + 1, stats };
@@ -392,6 +427,21 @@ export function useLocalGameState() {
         prepLine = "No active boss — set one on Battle";
       }
 
+      if (bossDefeated && activeIdx >= 0) {
+        const defeatedBoss = recruitedBosses[activeIdx]!;
+        const lootItem = rollBossLootItem(defeatedBoss, String(ts));
+        nextInventory = [lootItem, ...nextInventory];
+        nextPendingVictory = {
+          id: `bv-${ts}`,
+          bossName: defeatedBossName,
+          activityTitle: activity.title,
+          activityType: activity.type,
+          xpReward: activity.xpReward,
+          statDelta: { ...activity.statDelta },
+          lootItem
+        };
+      }
+
       const leaderboard = syncLeaderboard(current.leaderboard, profile);
       const rank = rankForPlayer(leaderboard, profile.name);
       const rankedProfile = rank > 0 ? { ...profile, rank } : profile;
@@ -409,7 +459,6 @@ export function useLocalGameState() {
       };
 
       const statLine = formatStatDeltaLine(activity.statDelta);
-      const ts = Date.now();
       const topNotifications = [
         {
           id: `n-${ts}`,
@@ -425,7 +474,7 @@ export function useLocalGameState() {
               {
                 id: `n-boss-${ts}`,
                 title: "Boss defeated",
-                body: `${defeatedBossName} hit 0 HP. Open Battle to review loot.`,
+                body: `${defeatedBossName} hit 0 HP — tap your screen to open the victory loot chest!`,
                 createdAt: "just now",
                 read: false,
                 starred: false,
@@ -445,9 +494,26 @@ export function useLocalGameState() {
         leaderboard,
         campusRaidWeekKey: raidMonday,
         campusRaidContributions,
+        inventory: nextInventory,
+        pendingBossVictory: nextPendingVictory,
+        activityLogBanner: {
+          id: ts,
+          activityTitle: activity.title,
+          xpReward: activity.xpReward,
+          ...(statLine ? { statsText: statLine } : {}),
+          ...(prepLine ? { detailLine: prepLine } : {})
+        },
         notifications: [...topNotifications, ...current.notifications]
       };
     });
+  }
+
+  const clearActivityLogBanner = useCallback(() => {
+    setState((c) => ({ ...c, activityLogBanner: null }));
+  }, []);
+
+  function dismissBossVictory() {
+    setState((c) => ({ ...c, pendingBossVictory: null }));
   }
 
   function claimQuestReward(questId: string) {
@@ -780,6 +846,8 @@ export function useLocalGameState() {
     setActiveRecruitedBoss,
     setEquipmentSlot,
     playDailyTraining,
+    dismissBossVictory,
+    clearActivityLogBanner,
     logOut
   };
 }

@@ -37,5 +37,8 @@ export function saveState(state: CampusQuestState) {
     return;
   }
 
-  window.localStorage.setItem(getGameStorageKey(), JSON.stringify(state));
+  window.localStorage.setItem(
+    getGameStorageKey(),
+    JSON.stringify({ ...state, activityLogBanner: null })
+  );
 }

@@ -477,6 +477,78 @@ export function getSampleState(): CampusQuestState {
         read: true,
         starred: false,
         recencyRank: 500
+      },
+      {
+        id: "n10",
+        title: "Keaney drop-in hours",
+        body: "Rec staff added Sunday open gym blocks — log a workout and keep your stamina streak warm.",
+        createdAt: "4h ago",
+        read: false,
+        starred: false,
+        recencyRank: 575
+      },
+      {
+        id: "n11",
+        title: "Carothers study rooms",
+        body: "Same-day group rooms just opened for finals week. Book early if you’re hosting a cram squad.",
+        createdAt: "5h ago",
+        read: true,
+        starred: false,
+        recencyRank: 560
+      },
+      {
+        id: "n12",
+        title: "Quad pop-up: free coffee",
+        body: "Student org tabling near the Union steps until 2pm — quick social XP if you say hi to two tables.",
+        createdAt: "Yesterday",
+        read: false,
+        starred: false,
+        recencyRank: 545
+      },
+      {
+        id: "n13",
+        title: "Dining balance heads-up",
+        body: "Rhody Bucks look thin for the week. Ram Account top-off is one tap in the dining app.",
+        createdAt: "Yesterday",
+        read: true,
+        starred: false,
+        recencyRank: 535
+      },
+      {
+        id: "n14",
+        title: "Writing center slots",
+        body: "The Writing Center has same-night appointments. Bring a draft — great for knowledge + focus quests.",
+        createdAt: "2d ago",
+        read: false,
+        starred: true,
+        recencyRank: 525
+      },
+      {
+        id: "n15",
+        title: "Shuttle detour (temporary)",
+        body: "Loop B skips Fine Arts for two days. Plan +5 minutes if you’re catching class from the dorms.",
+        createdAt: "2d ago",
+        read: true,
+        starred: false,
+        recencyRank: 515
+      },
+      {
+        id: "n16",
+        title: "Mindfulness @ Memorial Union",
+        body: "20-minute guided reset Thursday noon. Low-key stamina recovery between lectures.",
+        createdAt: "3d ago",
+        read: false,
+        starred: false,
+        recencyRank: 505
+      },
+      {
+        id: "n17",
+        title: "Brightspace sync reminder",
+        body: "Two syllabi updated overnight. Skim announcements so quest-sized deadlines don’t sneak up.",
+        createdAt: "3d ago",
+        read: true,
+        starred: false,
+        recencyRank: 495
       }
     ],
     directMessageThreads: [
@@ -608,6 +680,8 @@ export function getSampleState(): CampusQuestState {
     trainingDayKey: localDateKey(),
     trainingPlaysUsed: 0,
     campusRaidWeekKey: localMondayDateKey(),
-    campusRaidContributions: {}
+    campusRaidContributions: {},
+    pendingBossVictory: null,
+    activityLogBanner: null
   };
 }

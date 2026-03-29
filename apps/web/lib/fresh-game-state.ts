@@ -60,6 +60,8 @@ export function createFreshGameState(email: string, displayName: string): Campus
     trainingDayKey: localDateKey(),
     trainingPlaysUsed: 0,
     campusRaidWeekKey: localMondayDateKey(),
-    campusRaidContributions: {}
+    campusRaidContributions: {},
+    pendingBossVictory: null,
+    activityLogBanner: null
   };
 }
