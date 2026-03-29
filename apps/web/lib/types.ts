@@ -27,6 +27,8 @@ export interface Achievement {
 
 export interface CharacterProfile {
   name: string;
+  /** Public @handle without @; shown on Profile tab */
+  handle?: string;
   avatarClass: string;
   level: number;
   xp: number;
@@ -62,12 +64,17 @@ export interface Quest {
   rewardClaimed?: boolean;
 }
 
+/** Weakness: matching activity stats deal bonus damage; `random` rolls crits. */
+export type BossWeakness = "random" | StatKey;
+
 export interface BossBattle {
   id: string;
   name: string;
   theme: string;
-  prepProgress: number;
-  prepGoal: number;
+  /** Minimum 250; 500+ counts as final-tier for loot messaging. */
+  maxHp: number;
+  hpRemaining: number;
+  weakness: BossWeakness;
   lootPreview: {
     name: string;
     rarity: Rarity;

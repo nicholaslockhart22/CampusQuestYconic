@@ -8,11 +8,13 @@ import { loadState, saveState } from "@/lib/storage";
 import type {
   ActivityLog,
   BossBattle,
+  BossWeakness,
   CampusQuestState,
   CharacterProfile,
   FeedPost,
   PostReactionKind,
   StatBlock,
+  StatKey,
   GuildSummary
 } from "@/lib/types";
 
@@ -48,6 +50,95 @@ function defaultRecruitedLoot(): BossBattle["lootPreview"] {
   ];
 }
 
+type LegacyBossPersisted = {
+  id: string;
+  name: string;
+  theme?: string;
+  prepProgress?: number;
+  prepGoal?: number;
+  maxHp?: number;
+  hpRemaining?: number;
+  weakness?: BossWeakness;
+  lootPreview?: BossBattle["lootPreview"];
+};
+
+function migrateBossBattle(raw: LegacyBossPersisted): BossBattle {
+  const lootPreview =
+    raw.lootPreview?.length ? raw.lootPreview : defaultRecruitedLoot();
+  if (
+    typeof raw.maxHp === "number" &&
+    typeof raw.hpRemaining === "number" &&
+    raw.weakness != null
+  ) {
+    const maxHp = Math.max(250, Math.round(raw.maxHp));
+    const hpRemaining = Math.min(maxHp, Math.max(0, Math.round(raw.hpRemaining)));
+    return {
+      id: raw.id,
+      name: raw.name,
+      theme:
+        raw.theme?.trim() ||
+        (maxHp >= 500 ? "Final-tier threat — better loot odds" : "Campus boss"),
+      maxHp,
+      hpRemaining,
+      weakness: raw.weakness,
+      lootPreview
+    };
+  }
+  const prepGoal = Math.max(1, Number(raw.prepGoal) || 10);
+  const prepProgress = Math.max(0, Number(raw.prepProgress) || 0);
+  const maxHp = Math.max(250, prepGoal * 25);
+  const dealt = Math.min(maxHp, Math.round((prepProgress / prepGoal) * maxHp));
+  return {
+    id: raw.id,
+    name: raw.name,
+    theme: raw.theme?.trim() || "Campus boss",
+    maxHp,
+    hpRemaining: maxHp - dealt,
+    weakness: "random",
+    lootPreview
+  };
+}
+
+const BOSS_BASE_DAMAGE_FRAC = 0.02;
+const BOSS_RANDOM_CRIT_CHANCE = 0.28;
+
+function activityPrimaryStat(activity: ActivityLog): StatKey {
+  switch (activity.type) {
+    case "workout":
+      return activity.durationMinutes >= 25 ? "stamina" : "strength";
+    case "study":
+      return "knowledge";
+    case "focus":
+      return "focus";
+    case "club":
+    case "event":
+    case "networking":
+      return "social";
+    default:
+      return "focus";
+  }
+}
+
+function computeBossDamage(
+  b: BossBattle,
+  activity: ActivityLog
+): { damage: number; bonus: boolean } {
+  const base = Math.max(10, Math.round(b.maxHp * BOSS_BASE_DAMAGE_FRAC));
+  let damage = base;
+  let bonus = false;
+  if (b.weakness === "random") {
+    if (Math.random() < BOSS_RANDOM_CRIT_CHANCE) {
+      damage += base;
+      bonus = true;
+    }
+  } else if (activityPrimaryStat(activity) === b.weakness) {
+    damage += base;
+    bonus = true;
+  }
+  damage = Math.min(damage, b.hpRemaining);
+  return { damage, bonus };
+}
+
 function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuestState {
   const legacy = raw as RawPersisted;
   const base = raw as CampusQuestState;
@@ -67,7 +158,9 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     recruitedBosses = legacyBosses.slice(0, MAX_RECRUITED_BOSSES);
   }
 
-  recruitedBosses = recruitedBosses.slice(0, MAX_RECRUITED_BOSSES);
+  recruitedBosses = recruitedBosses
+    .slice(0, MAX_RECRUITED_BOSSES)
+    .map((b) => migrateBossBattle(b as LegacyBossPersisted));
 
   let activeRecruitedBossId: string | null =
     typeof base.activeRecruitedBossId === "string" ? base.activeRecruitedBossId : null;
@@ -82,8 +175,17 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
       ? base.feedFollowing
       : getSampleState().feedFollowing;
+  const profile = {
+    ...base.profile,
+    handle:
+      typeof base.profile.handle === "string" && base.profile.handle.trim()
+        ? base.profile.handle.trim().replace(/^@+/, "")
+        : base.profile.handle
+  };
+
   return {
     ...base,
+    profile,
     quests: (base.quests || []).map((quest) => ({
       ...quest,
       rewardClaimed: quest.rewardClaimed ?? false
@@ -163,23 +265,24 @@ export function useLocalGameState() {
       const activeId = current.activeRecruitedBossId;
       const activeIdx =
         activeId != null ? recruitedBosses.findIndex((b) => b.id === activeId) : -1;
-      let prepComplete = false;
-      let completedBossName = "";
+      let bossDefeated = false;
+      let defeatedBossName = "";
       let prepLine = "";
       if (activeIdx >= 0) {
         const b = recruitedBosses[activeIdx];
-        if (b.prepProgress < b.prepGoal) {
-          const prevPrep = b.prepProgress;
-          const newPrep = Math.min(b.prepGoal, prevPrep + 1);
-          recruitedBosses[activeIdx] = { ...b, prepProgress: newPrep };
-          prepComplete = newPrep >= b.prepGoal && prevPrep < b.prepGoal;
-          completedBossName = b.name;
-          prepLine = `${newPrep}/${b.prepGoal} on ${b.name}`;
+        if (b.hpRemaining > 0) {
+          const prevHp = b.hpRemaining;
+          const { damage, bonus } = computeBossDamage(b, activity);
+          const newHp = Math.max(0, prevHp - damage);
+          recruitedBosses[activeIdx] = { ...b, hpRemaining: newHp };
+          bossDefeated = newHp === 0 && prevHp > 0;
+          defeatedBossName = b.name;
+          prepLine = `-${damage} HP on ${b.name}${bonus ? " (weakness!)" : ""} · ${newHp}/${b.maxHp} left`;
         } else {
-          prepLine = `${b.name} already primed`;
+          prepLine = `${b.name} already at 0 HP`;
         }
       } else if (recruitedBosses.length === 0) {
-        prepLine = "Recruit a boss on Battle to chip prep";
+        prepLine = "Recruit a boss on Battle to deal damage";
       } else {
         prepLine = "No active boss — set one on Battle";
       }
@@ -199,12 +302,12 @@ export function useLocalGameState() {
           starred: false,
           recencyRank: ts + 1
         },
-        ...(prepComplete
+        ...(bossDefeated
           ? [
               {
                 id: `n-boss-${ts}`,
-                title: "Boss prep complete",
-                body: `${completedBossName} is fully primed. Open Battle to claim your edge.`,
+                title: "Boss defeated",
+                body: `${defeatedBossName} hit 0 HP. Open Battle to review loot.`,
                 createdAt: "just now",
                 read: false,
                 starred: false,
@@ -411,9 +514,15 @@ export function useLocalGameState() {
     });
   }
 
-  function updateProfile(patch: Partial<Pick<CharacterProfile, "name" | "bio" | "avatarClass">>) {
+  function updateProfile(
+    patch: Partial<Pick<CharacterProfile, "name" | "bio" | "avatarClass" | "handle">>
+  ) {
     setState((current) => {
       const nextProfile = { ...current.profile, ...patch };
+      if (patch.handle !== undefined) {
+        const h = patch.handle.trim().replace(/^@+/, "");
+        nextProfile.handle = h.length ? h : undefined;
+      }
       const leaderboard = syncLeaderboard(current.leaderboard, nextProfile);
       const rank = rankForPlayer(leaderboard, nextProfile.name);
       return {
@@ -424,19 +533,24 @@ export function useLocalGameState() {
     });
   }
 
-  function recruitBoss(payload: { name: string; theme: string; prepGoal: number }) {
+  function recruitBoss(payload: { name: string; maxHp: number; weakness: BossWeakness }) {
     const name = payload.name.trim();
     if (!name) return;
     setState((current) => {
       if (current.recruitedBosses.length >= MAX_RECRUITED_BOSSES) return current;
-      const rawGoal = Number(payload.prepGoal);
-      const prepGoal = Number.isFinite(rawGoal) ? Math.max(1, Math.min(99, Math.round(rawGoal))) : 10;
+      const rawHp = Number(payload.maxHp);
+      const maxHp = Number.isFinite(rawHp)
+        ? Math.max(250, Math.min(99999, Math.round(rawHp)))
+        : 250;
+      const theme =
+        maxHp >= 500 ? "Final-tier threat — better loot odds" : "Campus boss";
       const newBoss: BossBattle = {
         id: `rb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name,
-        theme: payload.theme.trim() || "Custom threat",
-        prepProgress: 0,
-        prepGoal,
+        theme,
+        maxHp,
+        hpRemaining: maxHp,
+        weakness: payload.weakness,
         lootPreview: defaultRecruitedLoot()
       };
       const recruitedBosses = [...current.recruitedBosses, newBoss];
