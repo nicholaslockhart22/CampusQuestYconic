@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { LocationQrProof } from "@/components/dashboard/location-qr-proof";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { LOCATION_QR_BONUS_XP } from "@/lib/location-qr";
 import type { ActivityLog, ActivityType, StatBlock } from "@/lib/types";
 
 const activityTemplates: Record<
@@ -26,24 +28,32 @@ export function ActivityLogPanel({
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [notes, setNotes] = useState("");
   const [rewardMessage, setRewardMessage] = useState("Log a win and watch the reward hit instantly.");
+  const [qrProofVerified, setQrProofVerified] = useState(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const template = activityTemplates[activityType];
+    const bonus = qrProofVerified ? LOCATION_QR_BONUS_XP : 0;
+    const xpReward = template.xpReward + bonus;
     const activity: ActivityLog = {
       id: `activity-${Date.now()}`,
       type: activityType,
       title: template.title,
       durationMinutes,
       notes,
-      xpReward: template.xpReward,
+      xpReward,
       statDelta: template.statDelta,
-      loggedAt: "just now"
+      loggedAt: "just now",
+      ...(qrProofVerified ? { locationQrVerified: true } : {})
     };
     onLogActivity(activity);
-    setRewardMessage(`+${template.xpReward} XP earned. ${template.title} updated your build instantly.`);
+    const bonusLine = bonus > 0 ? ` (+${bonus} campus check-in bonus)` : "";
+    setRewardMessage(
+      `+${xpReward} XP earned${bonusLine}. ${template.title} updated your build instantly.`
+    );
     setNotes("");
     setDurationMinutes(60);
+    setQrProofVerified(false);
   }
 
   return (
@@ -93,6 +103,8 @@ export function ActivityLogPanel({
             onChange={(event) => setNotes(event.target.value)}
           />
         </label>
+
+        <LocationQrProof verified={qrProofVerified} onVerifiedChange={setQrProofVerified} />
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <button

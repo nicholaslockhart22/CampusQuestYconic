@@ -11,6 +11,10 @@ import {
   type FriendsGuildCategory,
   type FriendsScreenGuild
 } from "@/lib/friends-screen-guilds";
+import {
+  loadPendingInviteGuildIds,
+  savePendingInviteGuildIds
+} from "@/lib/guild-invite-pending";
 
 const FRIENDS_KEY = "campusquest-friends-v1";
 const GUILD_MEMBERSHIPS_KEY = "campusquest-guild-memberships-v1";
@@ -90,6 +94,7 @@ export function FriendsSocialScreen() {
   const [guildSearch, setGuildSearch] = useState("");
   const [guildDetailId, setGuildDetailId] = useState<string | null>(null);
   const [joinedGuildIds, setJoinedGuildIds] = useState<string[]>([]);
+  const [pendingInviteIds, setPendingInviteIds] = useState<string[]>([]);
   const [guildToast, setGuildToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,6 +102,7 @@ export function FriendsSocialScreen() {
     const guildIds = loadGuildMemberships();
     setJoinedGuildIds(guildIds);
     saveGuildMemberships(guildIds);
+    setPendingInviteIds(loadPendingInviteGuildIds());
   }, []);
 
   useEffect(() => {
@@ -118,7 +124,28 @@ export function FriendsSocialScreen() {
     const next = [...joinedGuildIds, guildId];
     setJoinedGuildIds(next);
     saveGuildMemberships(next);
+    if (pendingInviteIds.includes(guildId)) {
+      const pend = pendingInviteIds.filter((id) => id !== guildId);
+      setPendingInviteIds(pend);
+      savePendingInviteGuildIds(pend);
+    }
     showGuildToast("You're in this guild now.");
+  }
+
+  function requestInvite(guildId: string) {
+    if (joinedGuildIds.includes(guildId)) return;
+    if (joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS) {
+      showGuildToast("You're in 3 guilds. Leave one to request invites elsewhere.");
+      return;
+    }
+    if (pendingInviteIds.includes(guildId)) {
+      showGuildToast("Invite already pending for this guild.");
+      return;
+    }
+    const next = [...pendingInviteIds, guildId];
+    setPendingInviteIds(next);
+    savePendingInviteGuildIds(next);
+    showGuildToast("Invite request sent to guild leaders.");
   }
 
   function leaveGuild(guildId: string) {
@@ -309,6 +336,24 @@ export function FriendsSocialScreen() {
           ) : (
             <p className="mt-1 text-[11px] text-ig-secondary">None yet — tap Join on a guild below.</p>
           )}
+          {pendingInviteIds.length > 0 ? (
+            <div className="mt-3 border-t border-cq-keaney/25 pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800/90">Invite pending</p>
+              <ul className="mt-1.5 space-y-1">
+                {pendingInviteIds.map((id) => {
+                  const g = FRIENDS_GUILD_BY_ID.get(id);
+                  return (
+                    <li key={id} className="flex items-center justify-between gap-2 text-[11px] text-cq-navy">
+                      <span className="min-w-0 truncate font-medium">{g ? g.name : id}</span>
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-amber-300/60">
+                        Pending
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
         </div>
         {guildToast ? (
           <p
@@ -354,6 +399,7 @@ export function FriendsSocialScreen() {
                       key={guild.id}
                       guild={guild}
                       isJoined={joinedGuildIds.includes(guild.id)}
+                      isInvitePending={pendingInviteIds.includes(guild.id)}
                       joinDisabled={
                         !joinedGuildIds.includes(guild.id) &&
                         joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS
@@ -361,11 +407,7 @@ export function FriendsSocialScreen() {
                       onViewGuild={() => setGuildDetailId(guild.id)}
                       onJoin={() => joinGuild(guild.id)}
                       onLeave={() => leaveGuild(guild.id)}
-                      onRequestInvite={() =>
-                        joinedGuildIds.length >= MAX_GUILD_MEMBERSHIPS
-                          ? showGuildToast("You're in 3 guilds. Leave one to request invites elsewhere.")
-                          : showGuildToast("Invite request sent to guild leaders (preview).")
-                      }
+                      onRequestInvite={() => requestInvite(guild.id)}
                     />
                   ))}
                 </div>
@@ -383,6 +425,7 @@ export function FriendsSocialScreen() {
 function FriendsGuildCard({
   guild,
   isJoined,
+  isInvitePending,
   joinDisabled,
   onViewGuild,
   onJoin,
@@ -391,6 +434,7 @@ function FriendsGuildCard({
 }: {
   guild: FriendsScreenGuild;
   isJoined: boolean;
+  isInvitePending: boolean;
   joinDisabled: boolean;
   onViewGuild: () => void;
   onJoin: () => void;
@@ -424,6 +468,9 @@ function FriendsGuildCard({
           <p className="mt-2 text-sm leading-snug text-ig-secondary">{guild.questDescription}</p>
           {isJoined ? (
             <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-cq-keaney">You&apos;re in this guild</p>
+          ) : null}
+          {!isJoined && isInvitePending ? (
+            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-800">Invite pending</p>
           ) : null}
         </div>
       </div>
@@ -461,11 +508,11 @@ function FriendsGuildCard({
         )}
         <button
           type="button"
-          disabled={isJoined}
+          disabled={isJoined || isInvitePending}
           className="rounded-lg border border-cq-keaney/45 bg-cq-keaneyIce/50 py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce disabled:cursor-not-allowed disabled:opacity-40"
           onClick={onRequestInvite}
         >
-          Request Invite
+          {isInvitePending ? "Invite pending" : "Request Invite"}
         </button>
       </div>
     </Card>

@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { activityPrimaryStat } from "@/lib/activity-primary-stat";
+import {
+  activityCountTouchingStat,
+  sumStatDeltasFromActivities
+} from "@/lib/activity-stat-deltas";
 import { ActivityLogPanel } from "@/components/dashboard/activity-log-panel";
 import { useGameState } from "@/components/providers/game-state-provider";
 import { RarityBadge } from "@/components/ui/rarity-badge";
 import { FRIENDS_GUILD_BY_ID } from "@/lib/friends-screen-guilds";
+import { statBarFillPercent, statBarSegmentMax } from "@/lib/stat-bar";
 import type { ActivityLog, CharacterProfile, EquipmentSlot, StatKey } from "@/lib/types";
 
 const GUILD_MEMBERSHIPS_KEY = "campusquest-guild-memberships-v1";
@@ -33,20 +37,6 @@ function slugHandle(name: string) {
 function displayAtHandle(profile: CharacterProfile) {
   const h = profile.handle.trim() || slugHandle(profile.name);
   return `@${h}`;
-}
-
-function countByStat(activities: ActivityLog[]): Record<StatKey, number> {
-  const init: Record<StatKey, number> = {
-    strength: 0,
-    stamina: 0,
-    knowledge: 0,
-    social: 0,
-    focus: 0
-  };
-  for (const a of activities) {
-    init[activityPrimaryStat(a)] += 1;
-  }
-  return init;
 }
 
 function xpLoggedToday(activities: ActivityLog[]) {
@@ -123,6 +113,54 @@ function LevelBar({ profile }: { profile: CharacterProfile }) {
   );
 }
 
+function StatXpBar({
+  statKey,
+  emoji,
+  label,
+  value,
+  dense
+}: {
+  statKey: StatKey;
+  emoji: string;
+  label: string;
+  value: number;
+  dense?: boolean;
+}) {
+  const max = statBarSegmentMax(value);
+  const pct = statBarFillPercent(value);
+  const tone =
+    statKey === "strength"
+      ? "from-rose-400 to-rose-600"
+      : statKey === "stamina"
+        ? "from-emerald-400 to-emerald-600"
+        : statKey === "knowledge"
+          ? "from-sky-400 to-sky-700"
+          : statKey === "social"
+            ? "from-violet-400 to-violet-600"
+            : "from-amber-400 to-amber-600";
+
+  return (
+    <div className={dense ? "" : "space-y-1.5"}>
+      <div className="flex items-center justify-between gap-2">
+        <p className={`text-ig-secondary ${dense ? "text-[11px]" : "text-xs"}`}>
+          <span aria-hidden>{emoji}</span> {label}
+        </p>
+        <p className={`tabular-nums font-bold text-cq-navy ${dense ? "text-xs" : "text-sm"}`}>
+          {value} <span className="font-medium text-ig-secondary">/ {max}</span>
+        </p>
+      </div>
+      <div
+        className={`overflow-hidden rounded-full bg-cq-keaneyIce ring-1 ring-cq-keaney/25 ${dense ? "h-1.5" : "h-2.5"}`}
+      >
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${tone} transition-[width] duration-300 ease-out`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ProfileMobileScreen() {
   const {
     state,
@@ -169,7 +207,7 @@ export function ProfileMobileScreen() {
     };
   }, []);
 
-  const statCounts = useMemo(() => countByStat(activities), [activities]);
+  const statDeltaTotals = useMemo(() => sumStatDeltasFromActivities(activities), [activities]);
   const xpToday = useMemo(() => xpLoggedToday(activities), [activities]);
   const surpriseQuest = useMemo(
     () =>
@@ -326,16 +364,13 @@ export function ProfileMobileScreen() {
               <span aria-hidden>⚔️</span>
               <h2 className="text-xs font-bold uppercase tracking-wide text-cq-keaney">Stats</h2>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="space-y-3">
               {STAT_META.map(({ key, emoji, label }) => (
                 <div
                   key={key}
-                  className="rounded-xl border border-cq-keaney/25 bg-cq-white px-3 py-2.5 shadow-sm"
+                  className="rounded-xl border border-cq-keaney/25 bg-cq-white px-3 py-3 shadow-sm"
                 >
-                  <p className="text-xs text-ig-secondary">
-                    {emoji} {label}
-                  </p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-cq-navy">{profile.stats[key]}</p>
+                  <StatXpBar statKey={key} emoji={emoji} label={label} value={profile.stats[key]} />
                 </div>
               ))}
             </div>
@@ -362,14 +397,30 @@ export function ProfileMobileScreen() {
           </Collapsible>
 
           <div className="space-y-2">
-            {STAT_META.map(({ key, emoji, label }) => (
-              <Collapsible key={key} title={`${label}`} icon={emoji}>
-                <p className="text-sm text-ig-secondary">
-                  <span className="font-bold tabular-nums text-cq-navy">{statCounts[key]}</span> activities logged toward
-                  this stat bucket.
-                </p>
-              </Collapsible>
-            ))}
+            {STAT_META.map(({ key, emoji, label }) => {
+              const nLogs = activityCountTouchingStat(activities, key);
+              const fromLogs = statDeltaTotals[key];
+              return (
+                <Collapsible key={key} title={`${label}`} icon={emoji}>
+                  <p className="text-sm text-cq-navy">
+                    Current total:{" "}
+                    <span className="font-bold tabular-nums">{profile.stats[key]}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-ig-secondary">
+                    <span className="font-bold tabular-nums text-cq-navy">+{fromLogs}</span> stat points from your logged
+                    activities
+                    {nLogs > 0 ? (
+                      <>
+                        {" "}
+                        (<span className="font-semibold text-cq-navy">{nLogs}</span>{" "}
+                        {nLogs === 1 ? "log" : "logs"} with {label} rewards)
+                      </>
+                    ) : null}
+                    .
+                  </p>
+                </Collapsible>
+              );
+            })}
           </div>
 
           <div className="rounded-xl border border-orange-200/80 bg-gradient-to-br from-amber-50 to-cq-white p-3 shadow-sm">
@@ -453,6 +504,11 @@ export function ProfileMobileScreen() {
                   >
                     <span className="font-semibold">{a.title}</span>
                     <span className="text-ig-secondary"> · +{a.xpReward} XP</span>
+                    {a.locationQrVerified ? (
+                      <span className="ml-1.5 inline-block rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
+                        QR
+                      </span>
+                    ) : null}
                     <p className="text-[11px] text-ig-secondary">{a.loggedAt}</p>
                   </li>
                 ))}
@@ -756,13 +812,10 @@ export function ProfileMobileScreen() {
                 </div>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 space-y-3">
               {STAT_META.map(({ key, emoji, label }) => (
-                <div key={key} className="rounded-lg border border-cq-keaney/20 bg-cq-white/90 px-2 py-2 text-xs">
-                  <span className="text-ig-secondary">
-                    {emoji} {label}
-                  </span>
-                  <p className="text-lg font-bold tabular-nums text-cq-navy">{profile.stats[key]}</p>
+                <div key={key} className="rounded-lg border border-cq-keaney/20 bg-cq-white/90 px-3 py-2.5">
+                  <StatXpBar dense statKey={key} emoji={emoji} label={label} value={profile.stats[key]} />
                 </div>
               ))}
             </div>

@@ -27,6 +27,8 @@ export interface Achievement {
 
 export interface CharacterProfile {
   name: string;
+  /** Verified student email (stored locally; .edu only at signup) */
+  email?: string;
   /** @handle without @; shown on Quad / profile */
   handle: string;
   avatarClass: string;
@@ -59,6 +61,8 @@ export interface ActivityLog {
   xpReward: number;
   statDelta: Partial<StatBlock>;
   loggedAt: string;
+  /** Set when a campus location check-in QR or link was verified for bonus XP */
+  locationQrVerified?: boolean;
 }
 
 export interface Quest {
@@ -115,7 +119,7 @@ export interface FeedPost {
   category: string;
   reactions: FeedPostReactions;
   timestamp: string;
-  /** Campus-relative path (e.g. /quad-media/x.svg) or JPEG data URL from composer */
+  /** Campus-relative path (e.g. /images/quad/x.png) or JPEG data URL from composer */
   imageUrl?: string;
   /** Ramarks: hashtag text without #, lowercase */
   ramarks: string[];
@@ -207,4 +211,8 @@ export interface CampusQuestState {
   trainingDayKey: string;
   /** Mini-game plays used today (max 2) */
   trainingPlaysUsed: number;
+  /** Local Monday YYYY-MM-DD — campus raid contributions reset when this changes */
+  campusRaidWeekKey: string;
+  /** Campus raid: XP toward the weekly pool per display name (from activity logs) */
+  campusRaidContributions: Record<string, number>;
 }

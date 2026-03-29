@@ -10,6 +10,13 @@ const GUILD_MEMBERSHIPS_KEY = "campusquest-guild-memberships-v1";
 const MAX_RECRUITED_BOSSES = 4;
 const MIN_BOSS_HP = 250;
 
+/** Demo NPC totals merged with your weekly raid XP from activity logs */
+const CAMPUS_RAID_NPC_SEED: { name: string; xp: number }[] = [
+  { name: "erg", xp: 552 },
+  { name: "Mia C.", xp: 401 },
+  { name: "Dev K.", xp: 388 }
+];
+
 const WEAKNESS_CHIPS: { value: BossWeakness; emoji: string; label: string }[] = [
   { value: "random", emoji: "🎲", label: "Random" },
   { value: "strength", emoji: "💪", label: "Strength" },
@@ -67,6 +74,20 @@ export function BattleHubScreen() {
 
   const campusRaidDamagePct = 0.1;
   const campusRaidHpLeft = 99.9;
+
+  const campusRaidTopContributors = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of CAMPUS_RAID_NPC_SEED) {
+      map.set(row.name, row.xp);
+    }
+    for (const [name, xp] of Object.entries(state.campusRaidContributions ?? {})) {
+      map.set(name, xp);
+    }
+    return [...map.entries()]
+      .map(([name, xp]) => ({ name, xp }))
+      .sort((a, b) => b.xp - a.xp)
+      .slice(0, 8);
+  }, [state.campusRaidContributions]);
 
   const recruited = state.recruitedBosses;
   const activeId = state.activeRecruitedBossId;
@@ -138,12 +159,28 @@ export function BattleHubScreen() {
             <div className="mt-4 border-t border-cq-keaney/20 pt-3">
               <p className="text-[10px] font-bold uppercase tracking-wide text-cq-keaney">Top contributors</p>
               <ol className="mt-2 space-y-2">
-                <li className="flex items-center justify-between gap-2 text-sm">
-                  <span className="font-semibold text-cq-navy">
-                    <span className="text-ig-secondary">1.</span> erg
-                  </span>
-                  <span className="font-bold tabular-nums text-cq-keaney">552</span>
-                </li>
+                {campusRaidTopContributors.map((row, i) => {
+                  const isYou = row.name === state.profile.name;
+                  return (
+                    <li
+                      key={row.name}
+                      className={`flex items-center justify-between gap-2 text-sm ${
+                        isYou ? "rounded-lg bg-cq-keaney/10 px-2 py-1 ring-1 ring-cq-keaney/25" : ""
+                      }`}
+                    >
+                      <span className="min-w-0 font-semibold text-cq-navy">
+                        <span className="text-ig-secondary">{i + 1}.</span>{" "}
+                        <span className="truncate">{row.name}</span>
+                        {isYou ? (
+                          <span className="ml-1.5 shrink-0 rounded-md bg-cq-keaney/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cq-navy">
+                            You
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 font-bold tabular-nums text-cq-keaney">{row.xp}</span>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           </BattleGridCard>

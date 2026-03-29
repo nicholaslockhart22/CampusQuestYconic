@@ -14,6 +14,38 @@ body {
   @apply bg-cq-deep text-cq-navy antialiased;
 }
 
+/* Welcome screen: logo fades in, holds, then fades out (duration set inline to match LOAD_MS). */
+@keyframes cqWelcomeLogoFade {
+  0% {
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.cq-welcome-logo-fade {
+  animation-name: cqWelcomeLogoFade;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cq-welcome-logo-fade {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(107, 184, 232, 0.45) rgba(11, 31, 65, 0.35);

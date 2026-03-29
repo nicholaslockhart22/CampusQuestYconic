@@ -1,5 +1,10 @@
+import { SessionGuard } from "@/components/auth/session-guard";
 import { MobileAppChrome } from "@/components/mobile/mobile-app-chrome";
 
 export default function ShellLayout({ children }: { children: React.ReactNode }) {
-  return <MobileAppChrome>{children}</MobileAppChrome>;
+  return (
+    <SessionGuard>
+      <MobileAppChrome>{children}</MobileAppChrome>
+    </SessionGuard>
+  );
 }

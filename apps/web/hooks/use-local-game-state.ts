@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { activityPrimaryStat } from "@/lib/activity-primary-stat";
-import { localDateKey } from "@/lib/calendar-local";
+import { localDateKey, localMondayDateKey } from "@/lib/calendar-local";
+import { clearSession, getSession } from "@/lib/campus-auth";
 import { applyXpGain, rankForPlayer, syncLeaderboard } from "@/lib/game-logic";
+import { createFreshGameState } from "@/lib/fresh-game-state";
+import { resolveFeedImageUrl } from "@/lib/feed-image-url";
 import { EMPTY_REACTIONS, normalizeFeedPost } from "@/lib/post-reactions";
+import { formatStatDeltaLine } from "@/lib/activity-stat-deltas";
 import { getSampleState } from "@/lib/sample-data";
-import { loadState, saveState, STORAGE_KEY } from "@/lib/storage";
+import { getGameStorageKey, loadState, saveState } from "@/lib/storage";
 import type {
   ActivityLog,
   BossBattle,
@@ -40,6 +44,16 @@ function mergeStats(base: StatBlock, delta: Partial<StatBlock>): StatBlock {
     knowledge: base.knowledge + (delta.knowledge ?? 0),
     social: base.social + (delta.social ?? 0),
     focus: base.focus + (delta.focus ?? 0)
+  };
+}
+
+function ensureStatBlock(raw: Partial<StatBlock> | StatBlock | undefined): StatBlock {
+  return {
+    strength: Math.max(0, Math.round(Number(raw?.strength) || 0)),
+    stamina: Math.max(0, Math.round(Number(raw?.stamina) || 0)),
+    knowledge: Math.max(0, Math.round(Number(raw?.knowledge) || 0)),
+    social: Math.max(0, Math.round(Number(raw?.social) || 0)),
+    focus: Math.max(0, Math.round(Number(raw?.focus) || 0))
   };
 }
 
@@ -132,6 +146,50 @@ function normalizeTraining(dayKey: string | undefined, used: number | undefined)
   };
 }
 
+function normalizeCampusRaid(base: {
+  campusRaidWeekKey?: string;
+  campusRaidContributions?: Record<string, number>;
+}): {
+  campusRaidWeekKey: string;
+  campusRaidContributions: Record<string, number>;
+} {
+  const monday = localMondayDateKey();
+  const raw = base.campusRaidContributions;
+  let contributions: Record<string, number> =
+    typeof raw === "object" && raw !== null && !Array.isArray(raw)
+      ? { ...(raw as Record<string, number>) }
+      : {};
+  let weekKey = typeof base.campusRaidWeekKey === "string" ? base.campusRaidWeekKey : monday;
+  if (weekKey !== monday) {
+    contributions = {};
+    weekKey = monday;
+  }
+  return { campusRaidWeekKey: weekKey, campusRaidContributions: contributions };
+}
+
+/** Campus demo posts always stay in "For you"; saved state merges by id (reactions, etc.) and appends user-only posts. */
+function mergeQuadFeedWithSample(persisted: FeedPost[] | undefined): FeedPost[] {
+  const sampleFeed = getSampleState().feed;
+  const persistedArr = Array.isArray(persisted) ? persisted : [];
+  if (persistedArr.length === 0) {
+    return sampleFeed;
+  }
+  const sampleIds = new Set(sampleFeed.map((p) => p.id));
+  const persistedById = new Map(persistedArr.map((p) => [p.id, p]));
+  return [
+    ...sampleFeed.map((post) => {
+      const saved = persistedById.get(post.id);
+      if (!saved) return post;
+      const mergedImage =
+        typeof saved.imageUrl === "string" && saved.imageUrl.trim() !== ""
+          ? saved.imageUrl
+          : post.imageUrl;
+      return { ...post, ...saved, imageUrl: mergedImage } as FeedPost;
+    }),
+    ...persistedArr.filter((p) => !sampleIds.has(p.id)),
+  ];
+}
+
 function computeBossDamage(
   b: BossBattle,
   activity: ActivityLog
@@ -189,16 +247,22 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
       ? base.feedFollowing
       : getSampleState().feedFollowing;
 
+  const feedRaw = mergeQuadFeedWithSample(base.feed);
+
   const inventory = Array.isArray(base.inventory) ? base.inventory : getSampleState().inventory;
   const inventoryIds = new Set(inventory.map((i) => i.id));
   const trainingNorm = normalizeTraining(base.trainingDayKey, base.trainingPlaysUsed);
+  const campusRaidNorm = normalizeCampusRaid(base);
+  const sessionEmail = getSession()?.email;
 
   return {
     ...base,
     profile: {
       ...base.profile,
       handle: base.profile.handle ?? "",
-      skillPoints: base.profile.skillPoints ?? 0
+      skillPoints: base.profile.skillPoints ?? 0,
+      stats: ensureStatBlock(base.profile.stats),
+      ...(sessionEmail && !base.profile.email ? { email: sessionEmail } : {})
     },
     quests: (base.quests || []).map((quest) => ({
       ...quest,
@@ -212,7 +276,9 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     equipmentLoadout: normalizeEquipmentLoadout(inventoryIds, base.equipmentLoadout),
     trainingDayKey: trainingNorm.trainingDayKey,
     trainingPlaysUsed: trainingNorm.trainingPlaysUsed,
-    feed: (base.feed || []).map((p) =>
+    campusRaidWeekKey: campusRaidNorm.campusRaidWeekKey,
+    campusRaidContributions: campusRaidNorm.campusRaidContributions,
+    feed: feedRaw.map((p) =>
       normalizeFeedPost(p as FeedPost & { confirmations?: number })
     ),
     feedFollowing: feedFollowingRaw.map((p) =>
@@ -254,24 +320,45 @@ function questAdvancesForActivity(
   return false;
 }
 
+function getInitialGameState(): CampusQuestState {
+  if (typeof window === "undefined") {
+    return normalizeLoadedState(getSampleState());
+  }
+  const session = getSession();
+  if (!session) {
+    return normalizeLoadedState(getSampleState());
+  }
+  const persisted = loadState();
+  if (persisted) {
+    return normalizeLoadedState(persisted);
+  }
+  return normalizeLoadedState(createFreshGameState(session.email, session.displayName));
+}
+
 export function useLocalGameState() {
-  const [state, setState] = useState<CampusQuestState>(() => normalizeLoadedState(getSampleState()));
+  const [state, setState] = useState<CampusQuestState>(() => getInitialGameState());
 
   useEffect(() => {
+    const session = getSession();
+    if (!session) return;
     const persisted = loadState();
     if (persisted) {
       setState(normalizeLoadedState(persisted));
+    } else {
+      setState(normalizeLoadedState(createFreshGameState(session.email, session.displayName)));
     }
   }, []);
 
   useEffect(() => {
+    if (!getSession()) return;
     saveState(state);
   }, [state]);
 
   function logActivity(activity: ActivityLog) {
     setState((current) => {
       const grown = applyXpGain(current.profile, activity.xpReward);
-      const profile = { ...grown, streakDays: grown.streakDays + 1 };
+      const stats = mergeStats(ensureStatBlock(grown.stats), activity.statDelta);
+      const profile = { ...grown, streakDays: grown.streakDays + 1, stats };
       const nextQuests = current.quests.map((quest) => {
         if (!questAdvancesForActivity(quest, activity)) {
           return quest;
@@ -309,12 +396,25 @@ export function useLocalGameState() {
       const rank = rankForPlayer(leaderboard, profile.name);
       const rankedProfile = rank > 0 ? { ...profile, rank } : profile;
 
+      const raidMonday = localMondayDateKey();
+      let campusRaidContributions = { ...(current.campusRaidContributions ?? {}) };
+      if ((current.campusRaidWeekKey ?? "") !== raidMonday) {
+        campusRaidContributions = {};
+      }
+      const contributorName = rankedProfile.name;
+      campusRaidContributions = {
+        ...campusRaidContributions,
+        [contributorName]:
+          (campusRaidContributions[contributorName] ?? 0) + activity.xpReward
+      };
+
+      const statLine = formatStatDeltaLine(activity.statDelta);
       const ts = Date.now();
       const topNotifications = [
         {
           id: `n-${ts}`,
           title: `${activity.title} logged`,
-          body: `You earned ${activity.xpReward} XP. ${prepLine}.`,
+          body: `You earned ${activity.xpReward} XP${statLine ? `. Stats: ${statLine}` : ""}. ${prepLine}.`,
           createdAt: "just now",
           read: false,
           starred: false,
@@ -343,6 +443,8 @@ export function useLocalGameState() {
         recruitedBosses,
         bossBattles: [],
         leaderboard,
+        campusRaidWeekKey: raidMonday,
+        campusRaidContributions,
         notifications: [...topNotifications, ...current.notifications]
       };
     });
@@ -497,7 +599,9 @@ export function useLocalGameState() {
       timestamp: "just now",
       ramarks: payload.ramarks,
       comments: [],
-      ...(payload.imageUrl ? { imageUrl: payload.imageUrl } : {})
+      ...(payload.imageUrl
+        ? { imageUrl: resolveFeedImageUrl(payload.imageUrl) ?? payload.imageUrl }
+        : {})
     };
 
     setState((current) => {
@@ -649,9 +753,14 @@ export function useLocalGameState() {
 
   function logOut() {
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY);
+      try {
+        window.localStorage.removeItem(getGameStorageKey());
+      } catch {
+        /* ignore */
+      }
+      clearSession();
+      window.location.href = "/";
     }
-    setState(normalizeLoadedState(getSampleState()));
   }
 
   return {
