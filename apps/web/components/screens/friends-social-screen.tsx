@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useGameState } from "@/components/providers/game-state-provider";
 import { Card } from "@/components/ui/card";
-import type { GuildSummary } from "@/lib/types";
+import {
+  friendsGuildCategoryOrder,
+  friendsGuildMatchesQuery,
+  friendsGuildsByCategory,
+  type FriendsGuildCategory,
+  type FriendsScreenGuild,
+  type FriendsScreenGuildMember
+} from "@/lib/friends-screen-guilds";
 
 const FRIENDS_KEY = "campusquest-friends-v1";
 
@@ -26,16 +32,6 @@ function friendMatchesQuery(row: FriendRow, query: string): boolean {
   if (!q) return true;
   const handle = row.handle.toLowerCase().replace(/^@/, "");
   return row.name.toLowerCase().includes(q) || handle.includes(q) || row.handle.toLowerCase().includes(q);
-}
-
-function guildMatchesQuery(guild: GuildSummary, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return (
-    guild.name.toLowerCase().includes(q) ||
-    guild.focus.toLowerCase().includes(q) ||
-    guild.momentum.toLowerCase().includes(q)
-  );
 }
 
 function loadFriends(): FriendRow[] {
@@ -61,11 +57,11 @@ function saveFriends(list: FriendRow[]) {
 }
 
 export function FriendsSocialScreen() {
-  const { state } = useGameState();
   const [friends, setFriends] = useState<FriendRow[]>([]);
   const [suggestions, setSuggestions] = useState(SUGGESTIONS);
   const [friendSearch, setFriendSearch] = useState("");
   const [guildSearch, setGuildSearch] = useState("");
+  const [expandedGuildId, setExpandedGuildId] = useState<string | null>(null);
 
   useEffect(() => {
     setFriends(loadFriends());
@@ -79,9 +75,26 @@ export function FriendsSocialScreen() {
     () => suggestions.filter((s) => friendMatchesQuery(s, friendSearch)),
     [suggestions, friendSearch]
   );
-  const filteredGuilds = useMemo(
-    () => state.guilds.filter((g) => guildMatchesQuery(g, guildSearch)),
-    [state.guilds, guildSearch]
+  const guildsByCategory = useMemo(() => friendsGuildsByCategory(), []);
+  const categoryOrder = useMemo(() => friendsGuildCategoryOrder(), []);
+
+  const filteredGuildsByCategory = useMemo(() => {
+    const q = guildSearch.trim();
+    const next: Record<FriendsGuildCategory, FriendsScreenGuild[]> = {
+      Study: [],
+      Fitness: [],
+      Networking: [],
+      Clubs: []
+    };
+    for (const cat of categoryOrder) {
+      next[cat] = guildsByCategory[cat].filter((g) => friendsGuildMatchesQuery(g, q));
+    }
+    return next;
+  }, [guildsByCategory, categoryOrder, guildSearch]);
+
+  const anyGuildsVisible = useMemo(
+    () => categoryOrder.some((c) => filteredGuildsByCategory[c].length > 0),
+    [categoryOrder, filteredGuildsByCategory]
   );
 
   function addFriend(row: FriendRow) {
@@ -200,41 +213,158 @@ export function FriendsSocialScreen() {
               type="search"
               value={guildSearch}
               onChange={(e) => setGuildSearch(e.target.value)}
-              placeholder="Search by name, focus, or vibe"
+              placeholder="Search guilds, quests, or members"
               className="w-full rounded-xl border border-cq-keaney/40 bg-cq-keaneyIce/40 py-2.5 pl-10 pr-3 text-sm text-cq-navy placeholder:text-ig-secondary/70 focus:border-cq-keaney focus:outline-none focus:ring-2 focus:ring-cq-keaney/30"
               autoComplete="off"
               enterKeyHint="search"
             />
           </div>
         </label>
-        <div className="space-y-3">
-          {filteredGuilds.length === 0 ? (
+        <div className="space-y-6">
+          {!anyGuildsVisible ? (
             <p className="rounded-xl border border-dashed border-cq-keaney/50 bg-cq-keaneyIce/40 px-4 py-6 text-center text-sm text-ig-secondary">
               No guilds match &ldquo;{guildSearch.trim()}&rdquo;.
             </p>
           ) : null}
-          {filteredGuilds.map((guild) => (
-            <Card key={guild.id} className="border-cq-keaney/40 bg-gradient-to-br from-cq-white to-cq-keaneyIce/30 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-cq-keaney">Guild</p>
-              <h3 className="mt-1 text-base font-bold text-cq-navy">{guild.name}</h3>
-              <p className="mt-1 text-sm text-ig-secondary">{guild.focus}</p>
-              <div className="mt-3 flex items-center justify-between text-xs text-ig-secondary">
-                <span>{guild.members} members</span>
-                <span className="rounded-full bg-cq-keaneySoft px-2 py-0.5 font-bold text-cq-navy ring-1 ring-cq-keaney/40">
-                  {guild.momentum}
-                </span>
+          {categoryOrder.map((category) => {
+            const list = filteredGuildsByCategory[category];
+            if (list.length === 0) return null;
+            return (
+              <div key={category}>
+                <h3 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-widest text-cq-keaney/90">
+                  {category}
+                </h3>
+                <div className="space-y-3">
+                  {list.map((guild) => (
+                    <FriendsGuildCard
+                      key={guild.id}
+                      guild={guild}
+                      expanded={expandedGuildId === guild.id}
+                      onToggleView={() =>
+                        setExpandedGuildId((id) => (id === guild.id ? null : guild.id))
+                      }
+                    />
+                  ))}
+                </div>
               </div>
-              <button
-                type="button"
-                className="mt-3 w-full rounded-lg border border-cq-keaney/45 bg-cq-white py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce"
-              >
-                Join guild
-              </button>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       </section>
     </div>
+  );
+}
+
+function FriendsGuildCard({
+  guild,
+  expanded,
+  onToggleView
+}: {
+  guild: FriendsScreenGuild;
+  expanded: boolean;
+  onToggleView: () => void;
+}) {
+  const memberLabel = `${guild.members.length}/${guild.memberCap} members`;
+
+  return (
+    <Card className="border-cq-keaney/40 bg-gradient-to-br from-cq-white to-cq-keaneyIce/30 shadow-sm">
+      <div className="flex items-start gap-2">
+        {guild.emoji ? (
+          <span className="text-2xl leading-none" aria-hidden>
+            {guild.emoji}
+          </span>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-cq-keaney">Guild</p>
+          <h3 className="mt-0.5 text-base font-bold text-cq-navy">{guild.name}</h3>
+          <p className="mt-1 text-xs font-semibold text-cq-keaney">{guild.category}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ig-secondary">
+            <span className="rounded-full bg-cq-navy/10 px-2 py-0.5 font-bold text-cq-navy">
+              Lv.{guild.level}
+            </span>
+            <span className="font-medium text-cq-navy/80">{memberLabel}</span>
+          </div>
+          <p className="mt-2 text-sm leading-snug text-ig-secondary">{guild.questDescription}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          className="rounded-lg border border-cq-keaney/50 bg-cq-white py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce"
+          aria-expanded={expanded}
+          onClick={onToggleView}
+        >
+          {expanded ? "Hide members" : "View Guild"}
+        </button>
+        <button
+          type="button"
+          className="rounded-lg bg-cq-navy py-2 text-sm font-bold text-white shadow-sm hover:bg-cq-navyLight"
+        >
+          Join
+        </button>
+        <button
+          type="button"
+          className="rounded-lg border border-cq-keaney/45 bg-cq-keaneyIce/50 py-2 text-sm font-semibold text-cq-navy hover:bg-cq-keaneyIce"
+        >
+          Request Invite
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="mt-3 rounded-xl border border-cq-keaney/25 bg-cq-white/80 px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-cq-keaney">Members</p>
+          <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
+            {sortMembersForDisplay(guild.members).map((mem) => (
+              <li
+                key={mem.id}
+                className="flex items-center justify-between gap-2 rounded-lg bg-cq-keaneyIce/40 px-2 py-1.5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cq-keaneyBright to-cq-navy text-xs font-bold text-white">
+                    {mem.name[0]}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-cq-navy">{mem.name}</p>
+                    {mem.handle ? (
+                      <p className="truncate text-[11px] text-ig-secondary">@{mem.handle}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <RoleBadge role={mem.role} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function sortMembersForDisplay(members: FriendsScreenGuildMember[]): FriendsScreenGuildMember[] {
+  const order = { founder: 0, cofounder: 1, member: 2 };
+  return [...members].sort((a, b) => order[a.role] - order[b.role]);
+}
+
+function RoleBadge({ role }: { role: FriendsScreenGuildMember["role"] }) {
+  if (role === "founder") {
+    return (
+      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+        Founder
+      </span>
+    );
+  }
+  if (role === "cofounder") {
+    return (
+      <span className="shrink-0 rounded-md bg-cq-keaneySoft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cq-navy">
+        Co-founder
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 rounded-md bg-cq-white px-1.5 py-0.5 text-[10px] font-semibold text-ig-secondary ring-1 ring-cq-keaney/20">
+      Member
+    </span>
   );
 }
 
