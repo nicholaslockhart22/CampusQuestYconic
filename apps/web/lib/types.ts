@@ -27,8 +27,8 @@ export interface Achievement {
 
 export interface CharacterProfile {
   name: string;
-  /** Public @handle without @; shown on Profile tab */
-  handle?: string;
+  /** @handle without @; shown on Quad / profile */
+  handle: string;
   avatarClass: string;
   level: number;
   xp: number;
@@ -38,6 +38,16 @@ export interface CharacterProfile {
   bio: string;
   stats: StatBlock;
   achievements: Achievement[];
+  /** Unspent skill tree points (UI placeholder until tree is wired) */
+  skillPoints: number;
+}
+
+export type EquipmentSlot = "hat" | "glasses" | "backpack";
+
+export interface EquipmentLoadout {
+  hat: string | null;
+  glasses: string | null;
+  backpack: string | null;
 }
 
 export interface ActivityLog {
@@ -191,4 +201,10 @@ export interface CampusQuestState {
   /** Direct message conversation previews */
   directMessageThreads: DirectMessageThread[];
   guilds: GuildSummary[];
+  /** Cosmetic slots — inventory item ids or null */
+  equipmentLoadout: EquipmentLoadout;
+  /** Local calendar day key (YYYY-MM-DD) for daily training reset */
+  trainingDayKey: string;
+  /** Mini-game plays used today (max 2) */
+  trainingPlaysUsed: number;
 }

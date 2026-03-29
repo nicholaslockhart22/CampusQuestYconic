@@ -1,3 +1,4 @@
+import { localDateKey } from "@/lib/calendar-local";
 import { rankForPlayer, syncLeaderboard } from "@/lib/game-logic";
 import type { CampusQuestState, StatBlock } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export function getSampleState(): CampusQuestState {
 
   const profileBase = {
     name: "Avery Rhody",
+    handle: "averyrhody",
     avatarClass: "Scholar Ranger",
     level: 12,
     xp: 2480,
@@ -62,6 +64,7 @@ export function getSampleState(): CampusQuestState {
     streakDays: 9,
     rank: 2,
     bio: "URI honors student building a balanced run across academics, fitness, and campus leadership.",
+    skillPoints: 2,
     stats: activities.reduce((stats, activity) => addStats(stats, activity.statDelta), baseStats),
     achievements: [
       {
@@ -121,6 +124,17 @@ export function getSampleState(): CampusQuestState {
         goal: 1,
         xpReward: 55,
         tag: "Momentum",
+        rewardClaimed: false
+      },
+      {
+        id: "qd-career",
+        title: "Career spark",
+        description: "Office hours or volunteer / org meeting (+32 XP)",
+        frequency: "daily",
+        progress: 0,
+        goal: 1,
+        xpReward: 32,
+        tag: "Campus",
         rewardClaimed: false
       },
       {
@@ -588,6 +602,9 @@ export function getSampleState(): CampusQuestState {
         members: 31,
         momentum: "Steady"
       }
-    ]
+    ],
+    equipmentLoadout: { hat: null, glasses: null, backpack: null },
+    trainingDayKey: localDateKey(),
+    trainingPlaysUsed: 0
   };
 }

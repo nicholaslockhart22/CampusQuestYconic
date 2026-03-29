@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { activityPrimaryStat } from "@/lib/activity-primary-stat";
+import { localDateKey } from "@/lib/calendar-local";
 import { applyXpGain, rankForPlayer, syncLeaderboard } from "@/lib/game-logic";
 import { EMPTY_REACTIONS, normalizeFeedPost } from "@/lib/post-reactions";
 import { getSampleState } from "@/lib/sample-data";
-import { loadState, saveState } from "@/lib/storage";
+import { loadState, saveState, STORAGE_KEY } from "@/lib/storage";
 import type {
   ActivityLog,
   BossBattle,
   BossWeakness,
   CampusQuestState,
   CharacterProfile,
+  EquipmentLoadout,
+  EquipmentSlot,
   FeedPost,
   PostReactionKind,
   StatBlock,
-  StatKey,
   GuildSummary
 } from "@/lib/types";
 
@@ -101,22 +104,32 @@ function migrateBossBattle(raw: LegacyBossPersisted): BossBattle {
 
 const BOSS_BASE_DAMAGE_FRAC = 0.02;
 const BOSS_RANDOM_CRIT_CHANCE = 0.28;
+const DAILY_TRAINING_MAX_PLAYS = 2;
+const DAILY_TRAINING_XP = 22;
 
-function activityPrimaryStat(activity: ActivityLog): StatKey {
-  switch (activity.type) {
-    case "workout":
-      return activity.durationMinutes >= 25 ? "stamina" : "strength";
-    case "study":
-      return "knowledge";
-    case "focus":
-      return "focus";
-    case "club":
-    case "event":
-    case "networking":
-      return "social";
-    default:
-      return "focus";
+function normalizeEquipmentLoadout(
+  inventoryIds: Set<string>,
+  raw?: Partial<EquipmentLoadout> | null
+): EquipmentLoadout {
+  const pick = (id: string | null | undefined) =>
+    id && inventoryIds.has(id) ? id : null;
+  const r = raw ?? {};
+  return {
+    hat: pick(r.hat),
+    glasses: pick(r.glasses),
+    backpack: pick(r.backpack)
+  };
+}
+
+function normalizeTraining(dayKey: string | undefined, used: number | undefined) {
+  const today = localDateKey();
+  if (dayKey !== today) {
+    return { trainingDayKey: today, trainingPlaysUsed: 0 };
   }
+  return {
+    trainingDayKey: today,
+    trainingPlaysUsed: Math.min(DAILY_TRAINING_MAX_PLAYS, Math.max(0, used ?? 0))
+  };
 }
 
 function computeBossDamage(
@@ -175,17 +188,18 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
       ? base.feedFollowing
       : getSampleState().feedFollowing;
-  const profile = {
-    ...base.profile,
-    handle:
-      typeof base.profile.handle === "string" && base.profile.handle.trim()
-        ? base.profile.handle.trim().replace(/^@+/, "")
-        : base.profile.handle
-  };
+
+  const inventory = Array.isArray(base.inventory) ? base.inventory : getSampleState().inventory;
+  const inventoryIds = new Set(inventory.map((i) => i.id));
+  const trainingNorm = normalizeTraining(base.trainingDayKey, base.trainingPlaysUsed);
 
   return {
     ...base,
-    profile,
+    profile: {
+      ...base.profile,
+      handle: base.profile.handle ?? "",
+      skillPoints: base.profile.skillPoints ?? 0
+    },
     quests: (base.quests || []).map((quest) => ({
       ...quest,
       rewardClaimed: quest.rewardClaimed ?? false
@@ -194,6 +208,10 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
     bossBattles: [],
     recruitedBosses,
     activeRecruitedBossId,
+    inventory,
+    equipmentLoadout: normalizeEquipmentLoadout(inventoryIds, base.equipmentLoadout),
+    trainingDayKey: trainingNorm.trainingDayKey,
+    trainingPlaysUsed: trainingNorm.trainingPlaysUsed,
     feed: (base.feed || []).map((p) =>
       normalizeFeedPost(p as FeedPost & { confirmations?: number })
     ),
@@ -515,14 +533,10 @@ export function useLocalGameState() {
   }
 
   function updateProfile(
-    patch: Partial<Pick<CharacterProfile, "name" | "bio" | "avatarClass" | "handle">>
+    patch: Partial<Pick<CharacterProfile, "name" | "bio" | "avatarClass" | "handle" | "skillPoints">>
   ) {
     setState((current) => {
       const nextProfile = { ...current.profile, ...patch };
-      if (patch.handle !== undefined) {
-        const h = patch.handle.trim().replace(/^@+/, "");
-        nextProfile.handle = h.length ? h : undefined;
-      }
       const leaderboard = syncLeaderboard(current.leaderboard, nextProfile);
       const rank = rankForPlayer(leaderboard, nextProfile.name);
       return {
@@ -580,6 +594,66 @@ export function useLocalGameState() {
     });
   }
 
+  function setEquipmentSlot(slot: EquipmentSlot, itemId: string | null) {
+    setState((current) => {
+      if (itemId != null && !current.inventory.some((i) => i.id === itemId)) {
+        return current;
+      }
+      return {
+        ...current,
+        equipmentLoadout: { ...current.equipmentLoadout, [slot]: itemId }
+      };
+    });
+  }
+
+  function playDailyTraining() {
+    setState((current) => {
+      const today = localDateKey();
+      let used = current.trainingPlaysUsed;
+      let dayKey = current.trainingDayKey;
+      if (dayKey !== today) {
+        used = 0;
+        dayKey = today;
+      }
+      if (used >= DAILY_TRAINING_MAX_PLAYS) return current;
+
+      const grown = applyXpGain(current.profile, DAILY_TRAINING_XP);
+      const leaderboard = syncLeaderboard(current.leaderboard, grown);
+      const rank = rankForPlayer(leaderboard, grown.name);
+      const profile = rank > 0 ? { ...grown, rank } : grown;
+      const nextUsed = used + 1;
+      const ts = Date.now();
+      const complete = nextUsed >= DAILY_TRAINING_MAX_PLAYS;
+      const trainNotif = {
+        id: `n-train-${ts}`,
+        title: complete ? "Daily training complete" : "Daily training",
+        body: complete
+          ? `+${DAILY_TRAINING_XP} XP — both plays used today. Streak mult ×1.02 after full training days.`
+          : `+${DAILY_TRAINING_XP} XP. One more play left today.`,
+        createdAt: "just now" as const,
+        read: false as const,
+        starred: false as const,
+        recencyRank: ts
+      };
+
+      return {
+        ...current,
+        profile,
+        leaderboard,
+        trainingDayKey: dayKey,
+        trainingPlaysUsed: nextUsed,
+        notifications: [trainNotif, ...current.notifications]
+      };
+    });
+  }
+
+  function logOut() {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+    setState(normalizeLoadedState(getSampleState()));
+  }
+
   return {
     state,
     logActivity,
@@ -594,6 +668,9 @@ export function useLocalGameState() {
     updateProfile,
     recruitBoss,
     deleteRecruitedBoss,
-    setActiveRecruitedBoss
+    setActiveRecruitedBoss,
+    setEquipmentSlot,
+    playDailyTraining,
+    logOut
   };
 }
