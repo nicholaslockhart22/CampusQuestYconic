@@ -21,24 +21,42 @@ import {
 
 const FRIENDS_KEY = "campusquest-friends-v1";
 
-/** Gold / silver / bronze glow for ranks 1–3 within each leaderboard list. */
+/** Gold / silver / bronze — bright outer glow + shiny highlight for ranks 1–3. */
 function podiumGlowClasses(rank: number): string {
   if (rank === 1) {
-    return "border-amber-400/80 bg-gradient-to-br from-amber-50/95 via-white to-amber-100/70 shadow-[0_0_28px_6px_rgba(234,179,8,0.42),0_0_12px_rgba(251,191,36,0.3)] ring-2 ring-amber-400/90 ring-offset-2 ring-offset-cq-keaneyIce";
+    return [
+      "relative z-[1] overflow-hidden border-2 border-amber-300/95",
+      "bg-gradient-to-br from-amber-100/90 via-white via-45% to-amber-200/80",
+      "shadow-[0_0_48px_16px_rgba(250,204,21,0.55),0_0_24px_10px_rgba(253,224,71,0.65),0_0_12px_4px_rgba(255,251,235,0.95),inset_0_1px_0_0_rgba(255,255,255,0.95)]",
+      "ring-2 ring-amber-300 ring-offset-[3px] ring-offset-cq-keaneyIce",
+      "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-tr before:from-transparent before:via-white/50 before:to-transparent before:opacity-90"
+    ].join(" ");
   }
   if (rank === 2) {
-    return "border-slate-300 bg-gradient-to-br from-slate-50/95 via-white to-slate-100/80 shadow-[0_0_24px_5px_rgba(148,163,184,0.5),0_0_10px_rgba(203,213,225,0.45)] ring-2 ring-slate-300 ring-offset-2 ring-offset-cq-keaneyIce";
+    return [
+      "relative z-[1] overflow-hidden border-2 border-slate-200/95",
+      "bg-gradient-to-br from-slate-100/90 via-white via-40% to-slate-200/85",
+      "shadow-[0_0_44px_14px_rgba(226,232,240,0.85),0_0_22px_8px_rgba(255,255,255,0.9),0_0_10px_4px_rgba(148,163,184,0.55),inset_0_1px_0_0_rgba(255,255,255,0.98)]",
+      "ring-2 ring-slate-200 ring-offset-[3px] ring-offset-cq-keaneyIce",
+      "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-tr before:from-transparent before:via-white/55 before:to-transparent before:opacity-80"
+    ].join(" ");
   }
   if (rank === 3) {
-    return "border-amber-800/45 bg-gradient-to-br from-orange-50/90 via-white to-amber-100/55 shadow-[0_0_22px_5px_rgba(180,83,9,0.38),0_0_8px_rgba(217,119,6,0.32)] ring-2 ring-amber-700/70 ring-offset-2 ring-offset-cq-keaneyIce";
+    return [
+      "relative z-[1] overflow-hidden border-2 border-amber-600/70",
+      "bg-gradient-to-br from-orange-100/85 via-white via-40% to-amber-200/75",
+      "shadow-[0_0_40px_12px_rgba(249,115,22,0.5),0_0_20px_8px_rgba(251,191,36,0.55),0_0_10px_4px_rgba(180,83,9,0.45),inset_0_1px_0_0_rgba(255,247,237,0.9)]",
+      "ring-2 ring-amber-500/85 ring-offset-[3px] ring-offset-cq-keaneyIce",
+      "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-tr before:from-transparent before:via-orange-100/40 before:to-transparent before:opacity-90"
+    ].join(" ");
   }
-  return "border-cq-keaney/25 bg-cq-white/90 shadow-sm";
+  return "border border-cq-keaney/25 bg-cq-white/90 shadow-sm";
 }
 
 function podiumRankNumberClass(rank: number): string {
-  if (rank === 1) return "text-amber-700";
-  if (rank === 2) return "text-slate-600";
-  if (rank === 3) return "text-amber-900";
+  if (rank === 1) return "bg-gradient-to-b from-amber-600 to-amber-800 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]";
+  if (rank === 2) return "bg-gradient-to-b from-slate-500 to-slate-700 bg-clip-text text-transparent drop-shadow-[0_0_6px_rgba(203,213,225,0.8)]";
+  if (rank === 3) return "bg-gradient-to-b from-amber-700 to-orange-900 bg-clip-text text-transparent drop-shadow-[0_0_6px_rgba(251,146,60,0.5)]";
   return "text-cq-keaney";
 }
 
