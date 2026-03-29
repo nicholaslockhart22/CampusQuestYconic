@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { applyXpGain, rankForPlayer, syncLeaderboard } from "@/lib/game-logic";
+import { EMPTY_REACTIONS, normalizeFeedPost } from "@/lib/post-reactions";
 import { getSampleState } from "@/lib/sample-data";
 import { loadState, saveState } from "@/lib/storage";
 import type {
@@ -10,12 +11,22 @@ import type {
   CampusQuestState,
   CharacterProfile,
   FeedPost,
-  StatBlock
+  PostReactionKind,
+  StatBlock,
+  GuildSummary
 } from "@/lib/types";
 
 type RawPersisted = Partial<CampusQuestState> & { bossBattle?: BossBattle };
 
 const defaultGuilds = getSampleState().guilds;
+
+/** Ignore persisted saves that still use the expanded guild model (roster / guildQuest). */
+function normalizeGuildsList(list: GuildSummary[] | undefined): GuildSummary[] {
+  if (!list?.length) return defaultGuilds;
+  const first = list[0] as unknown as Record<string, unknown>;
+  if ("roster" in first || "guildQuest" in first) return defaultGuilds;
+  return list;
+}
 
 function mergeStats(base: StatBlock, delta: Partial<StatBlock>): StatBlock {
   return {
@@ -37,18 +48,28 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
         : getSampleState().bossBattles;
 
   const base = raw as CampusQuestState;
+  const feedFollowingRaw =
+    Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
+      ? base.feedFollowing
+      : getSampleState().feedFollowing;
   return {
     ...base,
     quests: (base.quests || []).map((quest) => ({
       ...quest,
       rewardClaimed: quest.rewardClaimed ?? false
     })),
-    guilds: base.guilds?.length ? base.guilds : defaultGuilds,
+    guilds: normalizeGuildsList(base.guilds),
     bossBattles,
-    feedFollowing:
-      Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
-        ? base.feedFollowing
-        : getSampleState().feedFollowing
+    feed: (base.feed || []).map((p) =>
+      normalizeFeedPost(p as FeedPost & { confirmations?: number })
+    ),
+    feedFollowing: feedFollowingRaw.map((p) =>
+      normalizeFeedPost(p as FeedPost & { confirmations?: number })
+    ),
+    directMessageThreads:
+      Array.isArray(base.directMessageThreads) && base.directMessageThreads.length > 0
+        ? base.directMessageThreads
+        : getSampleState().directMessageThreads
   };
 }
 
@@ -127,22 +148,27 @@ export function useLocalGameState() {
       const rank = rankForPlayer(leaderboard, profile.name);
       const rankedProfile = rank > 0 ? { ...profile, rank } : profile;
 
+      const ts = Date.now();
       const topNotifications = [
         {
-          id: `n-${Date.now()}`,
+          id: `n-${ts}`,
           title: `${activity.title} logged`,
           body: `You earned ${activity.xpReward} XP. ${prepLine}.`,
           createdAt: "just now",
-          read: false
+          read: false,
+          starred: false,
+          recencyRank: ts + 1
         },
         ...(prepComplete
           ? [
               {
-                id: `n-boss-${Date.now()}`,
+                id: `n-boss-${ts}`,
                 title: "Boss prep complete",
                 body: `${completedBossName} is fully primed. Open Battle to claim your edge.`,
                 createdAt: "just now",
-                read: false
+                read: false,
+                starred: false,
+                recencyRank: ts
               }
             ]
           : [])
@@ -183,12 +209,15 @@ export function useLocalGameState() {
           source: quest.title
         };
         inventory = [drop, ...inventory];
+        const tsLoot = Date.now();
         notifications.unshift({
-          id: `n-loot-${Date.now()}`,
+          id: `n-loot-${tsLoot}`,
           title: "Quest loot acquired",
           body: `${drop.name} (${drop.rarity}) added to inventory.`,
           createdAt: "just now",
-          read: false
+          read: false,
+          starred: false,
+          recencyRank: tsLoot
         });
       }
 
@@ -214,14 +243,71 @@ export function useLocalGameState() {
     }));
   }
 
-  function confirmFeedPost(postId: string) {
+  function markDirectMessageRead(threadId: string) {
+    setState((current) => ({
+      ...current,
+      directMessageThreads: current.directMessageThreads.map((t) =>
+        t.id === threadId ? { ...t, unread: false } : t
+      )
+    }));
+  }
+
+  function toggleNotificationStar(id: string) {
+    setState((current) => ({
+      ...current,
+      notifications: current.notifications.map((item) =>
+        item.id === id ? { ...item, starred: !item.starred } : item
+      )
+    }));
+  }
+
+  function toggleDirectMessageStar(id: string) {
+    setState((current) => ({
+      ...current,
+      directMessageThreads: current.directMessageThreads.map((t) =>
+        t.id === id ? { ...t, starred: !t.starred } : t
+      )
+    }));
+  }
+
+  function addFeedComment(postId: string, body: string) {
+    const text = body.trim();
+    if (!text) return;
+    setState((current) => {
+      const comment = {
+        id: `c-${Date.now()}`,
+        author: current.profile.name,
+        body: text,
+        timestamp: "just now"
+      };
+      const mapPost = (post: FeedPost) =>
+        post.id === postId ? { ...post, comments: [...post.comments, comment] } : post;
+      return {
+        ...current,
+        feed: current.feed.map(mapPost),
+        feedFollowing: current.feedFollowing.map(mapPost)
+      };
+    });
+  }
+
+  function reactToFeedPost(postId: string, kind: PostReactionKind) {
     setState((current) => ({
       ...current,
       feed: current.feed.map((post) =>
-        post.id === postId ? { ...post, confirmations: post.confirmations + 1 } : post
+        post.id === postId
+          ? {
+              ...post,
+              reactions: { ...post.reactions, [kind]: post.reactions[kind] + 1 }
+            }
+          : post
       ),
       feedFollowing: current.feedFollowing.map((post) =>
-        post.id === postId ? { ...post, confirmations: post.confirmations + 1 } : post
+        post.id === postId
+          ? {
+              ...post,
+              reactions: { ...post.reactions, [kind]: post.reactions[kind] + 1 }
+            }
+          : post
       )
     }));
   }
@@ -231,6 +317,8 @@ export function useLocalGameState() {
     body: string;
     category: string;
     audience: "foryou" | "friends";
+    ramarks: string[];
+    imageUrl?: string;
   }) {
     const title = payload.title.trim() || "Quad update";
     const body = payload.body.trim();
@@ -243,27 +331,35 @@ export function useLocalGameState() {
       title,
       body,
       category: payload.category.trim() || "Campus",
-      confirmations: 0,
-      timestamp: "just now"
+      reactions: { ...EMPTY_REACTIONS },
+      timestamp: "just now",
+      ramarks: payload.ramarks,
+      comments: [],
+      ...(payload.imageUrl ? { imageUrl: payload.imageUrl } : {})
     };
 
     setState((current) => {
       const withAuthor = { ...post, author: current.profile.name };
       const isFriends = payload.audience === "friends";
+      const tsPost = Date.now();
       const notif = isFriends
         ? {
-            id: `n-post-${Date.now()}`,
+            id: `n-post-${tsPost}`,
             title: "Shared with friends",
             body: "Your update is on the Following feed.",
             createdAt: "just now" as const,
-            read: false as const
+            read: false as const,
+            starred: false as const,
+            recencyRank: tsPost
           }
         : {
-            id: `n-post-${Date.now()}`,
+            id: `n-post-${tsPost}`,
             title: "Posted to the Quad",
             body: "Your update is live on For you.",
             createdAt: "just now" as const,
-            read: false as const
+            read: false as const,
+            starred: false as const,
+            recencyRank: tsPost
           };
       return {
         ...current,
@@ -292,7 +388,11 @@ export function useLocalGameState() {
     logActivity,
     claimQuestReward,
     markNotificationRead,
-    confirmFeedPost,
+    markDirectMessageRead,
+    toggleNotificationStar,
+    toggleDirectMessageStar,
+    reactToFeedPost,
+    addFeedComment,
     addFeedPost,
     updateProfile
   };

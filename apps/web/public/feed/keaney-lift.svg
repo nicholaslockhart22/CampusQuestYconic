@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#234e52"/>
+  <rect x="120" y="320" width="560" height="24" rx="6" fill="#4fd1c5" opacity="0.5"/>
+  <rect x="200" y="180" width="80" height="160" rx="8" fill="#81e6d9" opacity="0.4"/>
+  <text x="400" y="90" fill="#e6fffa" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Keaney Gym</text>
+  <text x="400" y="420" fill="#b2f5ea" font-family="system-ui,sans-serif" font-size="17" text-anchor="middle">Morning lift PR</text>
+</svg>

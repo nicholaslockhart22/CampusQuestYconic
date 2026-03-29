@@ -1,16 +1,20 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGameState } from "@/components/providers/game-state-provider";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import type { NotificationItem, Quest } from "@/lib/types";
+import type { Quest } from "@/lib/types";
 
-type MenuKey = "daily" | "special" | "inbox" | null;
+type MenuKey = "daily" | "special" | null;
 
 export function TopToolbar() {
-  const { state, claimQuestReward, markNotificationRead } = useGameState();
+  const { state, claimQuestReward } = useGameState();
+  const pathname = usePathname();
   const [open, setOpen] = useState<MenuKey>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const isInbox = pathname === "/inbox";
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -31,63 +35,99 @@ export function TopToolbar() {
   return (
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-cq-keaney/25 bg-cq-navy/95 pt-[env(safe-area-inset-top,0)] shadow-[0_8px_32px_rgba(0,0,0,0.2)] backdrop-blur-md">
       <div ref={ref} className="relative mx-auto max-w-lg">
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold tracking-tight text-white">CampusQuest</h1>
-            <p className="truncate text-[11px] font-medium text-cq-keaneyBright">University of Rhode Island</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <MenuButton
-              label="Daily"
-              isOpen={open === "daily"}
-              onClick={() => setOpen((k) => (k === "daily" ? null : "daily"))}
-            />
-            <MenuButton
-              label="Events"
-              isOpen={open === "special"}
-              onClick={() => setOpen((k) => (k === "special" ? null : "special"))}
-            />
-            <MenuButton
-              label="Inbox"
-              badge={unreadCount}
-              isOpen={open === "inbox"}
-              onClick={() => setOpen((k) => (k === "inbox" ? null : "inbox"))}
-            />
-          </div>
-        </div>
+        {isInbox ? (
+          <InboxTopBar />
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-white">CampusQuest</h1>
+                <p className="truncate text-[11px] font-medium text-cq-keaneyBright">University of Rhode Island</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <MenuButton
+                  label="Daily"
+                  isOpen={open === "daily"}
+                  onClick={() => setOpen((k) => (k === "daily" ? null : "daily"))}
+                />
+                <MenuButton
+                  label="Events"
+                  isOpen={open === "special"}
+                  onClick={() => setOpen((k) => (k === "special" ? null : "special"))}
+                />
+                <InboxNavLink badge={unreadCount} />
+              </div>
+            </div>
 
-        {open === "daily" ? (
-          <DropdownPanel title="Daily quests" onClose={() => setOpen(null)}>
-            <QuestList quests={dailyQuests} onClaim={claimQuestReward} />
-          </DropdownPanel>
-        ) : null}
-        {open === "special" ? (
-          <DropdownPanel title="Special & campus events" onClose={() => setOpen(null)}>
-            <p className="mb-3 text-xs leading-relaxed text-ig-secondary">
-              Weekly arcs, URI-only quests, and limited campus event lines.
-            </p>
-            <QuestList quests={specialQuests} onClaim={claimQuestReward} />
-          </DropdownPanel>
-        ) : null}
-        {open === "inbox" ? (
-          <DropdownPanel title="Inbox" onClose={() => setOpen(null)}>
-            <InboxList items={state.notifications} onRead={markNotificationRead} />
-          </DropdownPanel>
-        ) : null}
+            {open === "daily" ? (
+              <DropdownPanel title="Daily quests" onClose={() => setOpen(null)}>
+                <QuestList quests={dailyQuests} onClaim={claimQuestReward} />
+              </DropdownPanel>
+            ) : null}
+            {open === "special" ? (
+              <DropdownPanel title="Special & campus events" onClose={() => setOpen(null)}>
+                <p className="mb-3 text-xs leading-relaxed text-ig-secondary">
+                  Weekly arcs, URI-only quests, and limited campus event lines.
+                </p>
+                <QuestList quests={specialQuests} onClaim={claimQuestReward} />
+              </DropdownPanel>
+            ) : null}
+          </>
+        )}
       </div>
     </header>
+  );
+}
+
+function InboxTopBar() {
+  return (
+    <div className="flex items-center gap-2 px-2 py-2.5 sm:px-3">
+      <Link
+        href="/quad"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cq-navyLight/80 text-cq-keaneyBright transition hover:bg-cq-navyLight"
+        aria-label="Back to Quad"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M15 18l-6-6 6-6"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Link>
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-lg font-bold tracking-tight text-white">Inbox</h1>
+        <p className="truncate text-[11px] font-medium text-cq-keaneyBright/90">Notifications & direct messages</p>
+      </div>
+    </div>
+  );
+}
+
+function InboxNavLink({ badge }: { badge: number }) {
+  return (
+    <Link
+      href="/inbox"
+      className="relative rounded-full bg-cq-navyLight/80 px-2.5 py-1.5 text-xs font-semibold text-cq-keaneyBright transition hover:bg-cq-navyLight"
+    >
+      Inbox
+      {badge > 0 ? (
+        <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      ) : null}
+    </Link>
   );
 }
 
 function MenuButton({
   label,
   isOpen,
-  badge,
   onClick
 }: {
   label: string;
   isOpen: boolean;
-  badge?: number;
   onClick: (e: React.MouseEvent) => void;
 }) {
   return (
@@ -104,11 +144,6 @@ function MenuButton({
       }`}
     >
       {label}
-      {badge && badge > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-          {badge > 9 ? "9+" : badge}
-        </span>
-      ) : null}
     </button>
   );
 }
@@ -178,37 +213,6 @@ function QuestList({ quests, onClaim }: { quests: Quest[]; onClaim: (id: string)
           </li>
         );
       })}
-    </ul>
-  );
-}
-
-function InboxList({
-  items,
-  onRead
-}: {
-  items: NotificationItem[];
-  onRead: (id: string) => void;
-}) {
-  if (items.length === 0) {
-    return <p className="text-sm text-ig-secondary">You&apos;re all caught up.</p>;
-  }
-  return (
-    <ul className="space-y-2">
-      {items.map((item) => (
-        <li key={item.id}>
-          <button
-            type="button"
-            className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
-              item.read ? "border-ig-border bg-cq-white" : "border-cq-keaney bg-cq-keaneyIce"
-            }`}
-            onClick={() => onRead(item.id)}
-          >
-            <p className="text-sm font-semibold text-cq-navy">{item.title}</p>
-            <p className="mt-0.5 text-xs text-ig-secondary">{item.body}</p>
-            <p className="mt-1 text-[10px] text-ig-secondary">{item.createdAt}</p>
-          </button>
-        </li>
-      ))}
     </ul>
   );
 }

@@ -6,7 +6,7 @@ import { AppShell } from "@/components/ui/app-shell";
 import { Card } from "@/components/ui/card";
 
 export function FeedScreen() {
-  const { state, confirmFeedPost } = useGameState();
+  const { state, reactToFeedPost } = useGameState();
 
   return (
     <AppShell
@@ -16,10 +16,10 @@ export function FeedScreen() {
       <Card>
         <p className="text-xs uppercase tracking-[0.24em] text-uri-navy/52">How confirmations work</p>
         <p className="mt-2 text-sm leading-7 text-uri-navy/72">
-          Tapping <strong>Confirm</strong> nudges that post&apos;s visibility and mirrors the supportive energy you want on campus. It is lightweight social proof, not a popularity score.
+          <strong>Verify</strong> maps to the Quad&apos;s verify reaction—lightweight social proof for campus wins. Open the Quad tab for photos, ramarks, and full reactions.
         </p>
       </Card>
-      <FeedPanel posts={state.feed} onConfirm={confirmFeedPost} />
+      <FeedPanel posts={state.feed} onReact={reactToFeedPost} />
     </AppShell>
   );
 }

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#1a202c"/>
+  <rect x="180" y="120" width="440" height="300" rx="12" fill="#4a5568" opacity="0.6"/>
+  <text x="400" y="90" fill="#e2e8f0" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Library late night</text>
+  <text x="400" y="460" fill="#a0aec0" font-family="system-ui,sans-serif" font-size="17" text-anchor="middle">Stacks &amp; study rooms</text>
+</svg>

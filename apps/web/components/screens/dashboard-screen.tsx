@@ -13,7 +13,14 @@ import { QuestBoard } from "@/components/dashboard/quest-board";
 import { useGameState } from "@/components/providers/game-state-provider";
 
 export function DashboardScreen() {
-  const { state, logActivity, markNotificationRead, claimQuestReward, confirmFeedPost } = useGameState();
+  const {
+    state,
+    logActivity,
+    markNotificationRead,
+    toggleNotificationStar,
+    claimQuestReward,
+    reactToFeedPost
+  } = useGameState();
 
   return (
     <AppShell
@@ -27,7 +34,7 @@ export function DashboardScreen() {
           <ProfileStats profile={state.profile} />
           <ActivityLogPanel onLogActivity={logActivity} />
           <QuestBoard quests={state.quests} onClaimReward={claimQuestReward} />
-          <FeedPanel posts={state.feed} onConfirm={confirmFeedPost} />
+          <FeedPanel posts={state.feed} onReact={reactToFeedPost} />
         </div>
 
         <div className="space-y-6">
@@ -39,6 +46,7 @@ export function DashboardScreen() {
           <NotificationsPanel
             notifications={state.notifications}
             onMarkRead={markNotificationRead}
+            onToggleStar={toggleNotificationStar}
           />
         </div>
       </div>

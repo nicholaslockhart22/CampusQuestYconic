@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#276749"/>
+  <rect x="80" y="200" width="640" height="200" rx="20" fill="#48bb78" opacity="0.4"/>
+  <text x="400" y="100" fill="#f0fff4" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Involvement Fair</text>
+  <text x="400" y="440" fill="#c6f6d5" font-family="system-ui,sans-serif" font-size="17" text-anchor="middle">Clubs &amp; org tables</text>
+</svg>

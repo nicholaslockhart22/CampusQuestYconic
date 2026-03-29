@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#234e52"/>
+  <ellipse cx="400" cy="300" rx="100" ry="140" fill="#38b2ac" opacity="0.25"/>
+  <rect x="360" y="160" width="80" height="200" rx="40" fill="#4fd1c5" opacity="0.4"/>
+  <text x="400" y="90" fill="#e6fffa" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Bio lab</text>
+  <text x="400" y="430" fill="#b2f5ea" font-family="system-ui,sans-serif" font-size="17" text-anchor="middle">Lab report week</text>
+</svg>

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useGameState } from "@/components/providers/game-state-provider";
+import { fileToResizedDataUrl } from "@/lib/resize-image";
+import { parseRamarksInput } from "@/lib/ramarks";
 
 const CATEGORIES = ["Campus", "Knowledge", "Social", "Strength", "Focus", "Study"] as const;
 
@@ -13,11 +15,15 @@ export function CreatePostForm({
   onPosted?: (audience: PostAudience) => void;
 }) {
   const { addFeedPost } = useGameState();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [ramarksRaw, setRamarksRaw] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [audience, setAudience] = useState<PostAudience>("foryou");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,10 +33,34 @@ export function CreatePostForm({
       return;
     }
     setError("");
-    addFeedPost({ title: title.trim(), body: trimmed, category, audience });
+    const ramarks = parseRamarksInput(ramarksRaw);
+    setBusy(true);
+    addFeedPost({
+      title: title.trim(),
+      body: trimmed,
+      category,
+      audience,
+      ramarks,
+      ...(imagePreview ? { imageUrl: imagePreview } : {})
+    });
     setTitle("");
     setBody("");
+    setRamarksRaw("");
+    setImagePreview(null);
+    if (fileRef.current) fileRef.current.value = "";
     onPosted?.(audience);
+    setBusy(false);
+  }
+
+  async function onPickImage(f: File | null) {
+    if (!f || !f.type.startsWith("image/")) return;
+    setError("");
+    try {
+      const url = await fileToResizedDataUrl(f);
+      setImagePreview(url);
+    } catch {
+      setError("Could not use that image. Try a smaller JPG or PNG.");
+    }
   }
 
   return (
@@ -117,13 +147,51 @@ export function CreatePostForm({
         </select>
       </label>
 
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-cq-navy">Ramarks (optional)</span>
+        <input
+          className="rounded-xl border border-cq-keaney/40 bg-cq-keaneyIce/40 px-3 py-2.5 text-sm text-cq-navy placeholder:text-ig-secondary/70 focus:border-cq-keaney focus:outline-none focus:ring-2 focus:ring-cq-keaney/35"
+          placeholder="#wbb #study (space or comma separated)"
+          value={ramarksRaw}
+          onChange={(e) => setRamarksRaw(e.target.value)}
+        />
+      </label>
+
+      <div className="grid gap-1.5">
+        <span className="text-xs font-semibold text-cq-navy">Photo (optional)</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="text-sm text-cq-navy file:mr-2 file:rounded-lg file:border-0 file:bg-cq-keaneySoft file:px-3 file:py-1.5 file:text-xs file:font-semibold"
+          onChange={(e) => onPickImage(e.target.files?.[0] ?? null)}
+        />
+        {imagePreview ? (
+          <div className="relative mt-1 overflow-hidden rounded-lg ring-1 ring-cq-keaney/30">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagePreview} alt="" className="max-h-40 w-full object-cover" />
+            <button
+              type="button"
+              className="absolute right-2 top-2 rounded-md bg-cq-navy/85 px-2 py-1 text-xs font-bold text-white"
+              onClick={() => {
+                setImagePreview(null);
+                if (fileRef.current) fileRef.current.value = "";
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ) : null}
+      </div>
+
       {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
       <button
         type="submit"
-        className="w-full rounded-xl bg-cq-navy py-3 text-sm font-bold text-white shadow-md transition hover:bg-cq-navyLight"
+        disabled={busy}
+        className="w-full rounded-xl bg-cq-navy py-3 text-sm font-bold text-white shadow-md transition hover:bg-cq-navyLight disabled:opacity-60"
       >
-        {audience === "friends" ? "Share with friends" : "Post to For you"}
+        {busy ? "Posting…" : audience === "friends" ? "Share with friends" : "Post to For you"}
       </button>
     </form>
   );

@@ -74,14 +74,41 @@ export interface BossBattle {
   }[];
 }
 
+export type PostReactionKind = "nod" | "hype" | "verify" | "assist";
+
+export interface FeedPostReactions {
+  nod: number;
+  hype: number;
+  verify: number;
+  assist: number;
+}
+
+export interface FeedComment {
+  id: string;
+  author: string;
+  body: string;
+  timestamp: string;
+}
+
 export interface FeedPost {
   id: string;
   author: string;
   title: string;
   body: string;
   category: string;
-  confirmations: number;
+  reactions: FeedPostReactions;
   timestamp: string;
+  /** Campus-relative path (e.g. /feed/x.svg) or JPEG data URL from composer */
+  imageUrl?: string;
+  /** Ramarks: hashtag text without #, lowercase */
+  ramarks: string[];
+  comments: FeedComment[];
+  /** @handle without @ */
+  authorHandle?: string;
+  /** Shown as streak line when positive */
+  streakDays?: number;
+  /** Optional mood emoji before the author name */
+  postEmoji?: string;
 }
 
 export interface InventoryItem {
@@ -104,6 +131,26 @@ export interface NotificationItem {
   body: string;
   createdAt: string;
   read: boolean;
+  /** Pinned to top of the notifications list when true */
+  starred?: boolean;
+  /** Higher = newer; used to sort within starred / non-starred groups */
+  recencyRank?: number;
+}
+
+export interface DirectMessageThread {
+  id: string;
+  peerName: string;
+  /** Without @; omit for group chats */
+  peerHandle?: string;
+  lastMessage: string;
+  lastAt: string;
+  unread: boolean;
+  /** Pinned to top of the messages list when true */
+  starred?: boolean;
+  /** Guild / group thread */
+  isGroup?: boolean;
+  /** Higher = newer; used to sort within starred / non-starred groups */
+  recencyRank?: number;
 }
 
 export interface GuildSummary {
@@ -127,5 +174,7 @@ export interface CampusQuestState {
   inventory: InventoryItem[];
   leaderboard: LeaderboardEntry[];
   notifications: NotificationItem[];
+  /** Direct message conversation previews */
+  directMessageThreads: DirectMessageThread[];
   guilds: GuildSummary[];
 }
