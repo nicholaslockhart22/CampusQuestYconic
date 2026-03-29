@@ -115,7 +115,7 @@ export interface FeedPost {
   category: string;
   reactions: FeedPostReactions;
   timestamp: string;
-  /** Campus-relative path (e.g. /feed/x.svg) or JPEG data URL from composer */
+  /** Campus-relative path (e.g. /quad-media/x.svg) or JPEG data URL from composer */
   imageUrl?: string;
   /** Ramarks: hashtag text without #, lowercase */
   ramarks: string[];

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useGameState } from "@/components/providers/game-state-provider";
-import { ActivityLogPanel } from "@/components/dashboard/activity-log-panel";
 import { BossBattlePanel } from "@/components/dashboard/boss-battle-panel";
 import { FRIENDS_GUILD_BY_ID } from "@/lib/friends-screen-guilds";
 import type { BossWeakness } from "@/lib/types";
@@ -34,13 +33,7 @@ function readJoinedGuildIds(): string[] {
 }
 
 export function BattleHubScreen() {
-  const {
-    state,
-    logActivity,
-    recruitBoss,
-    deleteRecruitedBoss,
-    setActiveRecruitedBoss
-  } = useGameState();
+  const { state, recruitBoss, deleteRecruitedBoss, setActiveRecruitedBoss } = useGameState();
   const [joinedGuildIds, setJoinedGuildIds] = useState<string[]>([]);
   const [recruitName, setRecruitName] = useState("");
   const [recruitHp, setRecruitHp] = useState("250");
@@ -113,12 +106,10 @@ export function BattleHubScreen() {
         <p className="text-xs font-bold uppercase tracking-wide text-cq-keaney">Battle hub</p>
         <p className="text-lg font-bold text-cq-navy">Boss battles & raids</p>
         <p className="mt-1 text-sm text-ig-secondary">
-          Campus-wide raid, guild battle, and personal bosses reset weekly. Log activities to chip in damage and push
-          leaderboards.
+          Campus-wide raid, guild battle, and personal bosses reset weekly. Log activities from{" "}
+          <strong className="text-cq-navy">Profile → Character</strong> to chip your active boss and push leaderboards.
         </p>
       </div>
-
-      <ActivityLogPanel onLogActivity={logActivity} />
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-cq-keaney">Raids & bosses</h2>

@@ -6,6 +6,7 @@ import { activityPrimaryStat } from "@/lib/activity-primary-stat";
 import { ActivityLogPanel } from "@/components/dashboard/activity-log-panel";
 import { useGameState } from "@/components/providers/game-state-provider";
 import { RarityBadge } from "@/components/ui/rarity-badge";
+import { FRIENDS_GUILD_BY_ID } from "@/lib/friends-screen-guilds";
 import type { ActivityLog, CharacterProfile, EquipmentSlot, StatKey } from "@/lib/types";
 
 const GUILD_MEMBERSHIPS_KEY = "campusquest-guild-memberships-v1";
@@ -54,15 +55,16 @@ function xpLoggedToday(activities: ActivityLog[]) {
     .reduce((sum, a) => sum + a.xpReward, 0);
 }
 
-function readGuildCount(): number {
-  if (typeof window === "undefined") return 0;
+function readJoinedGuildIds(): string[] {
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(GUILD_MEMBERSHIPS_KEY);
-    if (!raw) return 0;
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.length : 0;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === "string");
   } catch {
-    return 0;
+    return [];
   }
 }
 
@@ -138,7 +140,10 @@ export function ProfileMobileScreen() {
   const [bio, setBio] = useState(profile.bio);
   const [avatarClass, setAvatarClass] = useState(profile.avatarClass);
   const [saved, setSaved] = useState(false);
-  const [guildCount, setGuildCount] = useState(0);
+  const [joinedGuildIds, setJoinedGuildIds] = useState<string[]>([]);
+  const [profileSocialPanel, setProfileSocialPanel] = useState<
+    null | "posts" | "friends" | "following"
+  >(null);
 
   useEffect(() => {
     setName(profile.name);
@@ -148,8 +153,12 @@ export function ProfileMobileScreen() {
   }, [profile.name, profile.handle, profile.bio, profile.avatarClass]);
 
   useEffect(() => {
+    if (subTab !== "profile") setProfileSocialPanel(null);
+  }, [subTab]);
+
+  useEffect(() => {
     function refresh() {
-      setGuildCount(readGuildCount());
+      setJoinedGuildIds(readJoinedGuildIds());
     }
     refresh();
     window.addEventListener("focus", refresh);
@@ -173,6 +182,28 @@ export function ProfileMobileScreen() {
     () => new Set(feedFollowing.map((p) => p.author)).size,
     [feedFollowing]
   );
+
+  const friendGuildLabels = useMemo(
+    () =>
+      joinedGuildIds.map((id) => ({
+        id,
+        name: FRIENDS_GUILD_BY_ID.get(id)?.name ?? `Guild (${id.slice(0, 8)}…)`,
+        category: FRIENDS_GUILD_BY_ID.get(id)?.category
+      })),
+    [joinedGuildIds]
+  );
+
+  const followingPeople = useMemo(() => {
+    const byAuthor = new Map<string, string | undefined>();
+    for (const p of feedFollowing) {
+      if (!byAuthor.has(p.author)) {
+        byAuthor.set(p.author, p.authorHandle);
+      }
+    }
+    return [...byAuthor.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+      .map(([author, authorHandle]) => ({ author, authorHandle }));
+  }, [feedFollowing]);
   const bossesDefeated = useMemo(
     () => recruitedBosses.filter((b) => b.hpRemaining <= 0).length,
     [recruitedBosses]
@@ -445,19 +476,157 @@ export function ProfileMobileScreen() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl border border-cq-keaney/25 bg-cq-keaneyIce/40 py-3">
-              <p className="text-lg font-bold text-cq-navy">{myPosts.length}</p>
+            <button
+              type="button"
+              className={`rounded-xl border py-3 transition hover:bg-cq-keaneyIce/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cq-keaney/50 ${
+                profileSocialPanel === "posts"
+                  ? "border-cq-keaney bg-cq-keaneyIce ring-1 ring-cq-keaney/40"
+                  : "border-cq-keaney/25 bg-cq-keaneyIce/40"
+              }`}
+              aria-expanded={profileSocialPanel === "posts"}
+              onClick={() =>
+                setProfileSocialPanel((p) => (p === "posts" ? null : "posts"))
+              }
+            >
+              <p className="text-lg font-bold tabular-nums text-cq-navy">{myPosts.length}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-ig-secondary">Posts</p>
-            </div>
-            <div className="rounded-xl border border-cq-keaney/25 bg-cq-keaneyIce/40 py-3">
-              <p className="text-lg font-bold text-cq-navy">{guildCount}</p>
+            </button>
+            <button
+              type="button"
+              className={`rounded-xl border py-3 transition hover:bg-cq-keaneyIce/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cq-keaney/50 ${
+                profileSocialPanel === "friends"
+                  ? "border-cq-keaney bg-cq-keaneyIce ring-1 ring-cq-keaney/40"
+                  : "border-cq-keaney/25 bg-cq-keaneyIce/40"
+              }`}
+              aria-expanded={profileSocialPanel === "friends"}
+              onClick={() =>
+                setProfileSocialPanel((p) => (p === "friends" ? null : "friends"))
+              }
+            >
+              <p className="text-lg font-bold tabular-nums text-cq-navy">{joinedGuildIds.length}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-ig-secondary">Friends</p>
-            </div>
-            <div className="rounded-xl border border-cq-keaney/25 bg-cq-keaneyIce/40 py-3">
-              <p className="text-lg font-bold text-cq-navy">{followingAuthors}</p>
+            </button>
+            <button
+              type="button"
+              className={`rounded-xl border py-3 transition hover:bg-cq-keaneyIce/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cq-keaney/50 ${
+                profileSocialPanel === "following"
+                  ? "border-cq-keaney bg-cq-keaneyIce ring-1 ring-cq-keaney/40"
+                  : "border-cq-keaney/25 bg-cq-keaneyIce/40"
+              }`}
+              aria-expanded={profileSocialPanel === "following"}
+              onClick={() =>
+                setProfileSocialPanel((p) => (p === "following" ? null : "following"))
+              }
+            >
+              <p className="text-lg font-bold tabular-nums text-cq-navy">{followingAuthors}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-ig-secondary">Following</p>
-            </div>
+            </button>
           </div>
+
+          {profileSocialPanel ? (
+            <div
+              className="rounded-xl border border-cq-keaney/35 bg-cq-white p-3 shadow-sm"
+              role="region"
+              aria-label={
+                profileSocialPanel === "posts"
+                  ? "Your posts"
+                  : profileSocialPanel === "friends"
+                    ? "Guilds you joined"
+                    : "People you follow"
+              }
+            >
+              <div className="flex items-start justify-between gap-2 border-b border-cq-keaney/15 pb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-cq-navy">
+                    {profileSocialPanel === "posts"
+                      ? "Your posts"
+                      : profileSocialPanel === "friends"
+                        ? "Friends"
+                        : "Following"}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-ig-secondary">
+                    {profileSocialPanel === "posts"
+                      ? "Posts you shared to the Quad (For you)."
+                      : profileSocialPanel === "friends"
+                        ? "Guilds you joined on the Friends tab."
+                        : "Authors who appear in your Following feed."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-cq-keaney hover:bg-cq-keaneyIce"
+                  onClick={() => setProfileSocialPanel(null)}
+                >
+                  Close
+                </button>
+              </div>
+              <ul className="mt-3 max-h-60 space-y-2 overflow-y-auto">
+                {profileSocialPanel === "posts" ? (
+                  myPosts.length === 0 ? (
+                    <li className="text-sm text-ig-secondary">
+                      No posts yet.{" "}
+                      <Link href="/quad" className="font-semibold text-cq-navy underline">
+                        Share on the Quad
+                      </Link>
+                    </li>
+                  ) : (
+                    myPosts.map((p) => (
+                      <li
+                        key={p.id}
+                        className="rounded-lg border border-cq-keaney/20 bg-cq-keaneyIce/30 px-3 py-2 text-left text-sm"
+                      >
+                        <p className="font-semibold text-cq-navy">{p.title}</p>
+                        <p className="text-[11px] text-ig-secondary">{p.timestamp}</p>
+                      </li>
+                    ))
+                  )
+                ) : null}
+                {profileSocialPanel === "friends" ? (
+                  friendGuildLabels.length === 0 ? (
+                    <li className="text-sm text-ig-secondary">
+                      You have not joined a guild yet.{" "}
+                      <Link href="/friends" className="font-semibold text-cq-navy underline">
+                        Find guilds on Friends
+                      </Link>
+                    </li>
+                  ) : (
+                    friendGuildLabels.map((g) => (
+                      <li
+                        key={g.id}
+                        className="rounded-lg border border-cq-keaney/20 bg-cq-keaneyIce/30 px-3 py-2 text-left text-sm text-cq-navy"
+                      >
+                        <span className="font-semibold">{g.name}</span>
+                        {g.category ? (
+                          <span className="text-ig-secondary"> · {g.category}</span>
+                        ) : null}
+                      </li>
+                    ))
+                  )
+                ) : null}
+                {profileSocialPanel === "following" ? (
+                  followingPeople.length === 0 ? (
+                    <li className="text-sm text-ig-secondary">
+                      No authors in your Following feed yet. Post to{" "}
+                      <strong className="text-cq-navy">friends</strong> from the Quad, or check back when classmates
+                      share there.
+                    </li>
+                  ) : (
+                    followingPeople.map(({ author, authorHandle }) => (
+                      <li
+                        key={author}
+                        className="rounded-lg border border-cq-keaney/20 bg-cq-keaneyIce/30 px-3 py-2 text-left text-sm"
+                      >
+                        <p className="font-semibold text-cq-navy">{author}</p>
+                        {authorHandle ? (
+                          <p className="text-[11px] font-medium text-cq-keaney">@{authorHandle}</p>
+                        ) : null}
+                      </li>
+                    ))
+                  )
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
 
           <Collapsible title="Edit bio" icon="✏️" defaultOpen>
             <form className="space-y-3" onSubmit={handleSaveProfile}>

@@ -7,6 +7,48 @@ export const EMPTY_REACTIONS: FeedPostReactions = {
   assist: 0
 };
 
+/**
+ * Legacy: missing .png files and `/feed/*` paths collide with Next redirect `/feed` → `/quad`.
+ * Static assets live under `/quad-media/*`.
+ */
+const FEED_IMAGE_ALIASES: Record<string, string> = {
+  "/feed/wbb-arena.png": "/quad-media/wbb-arena.svg",
+  "/feed/wbb-arena.svg": "/quad-media/wbb-arena.svg",
+  "/feed/keaney-gym.png": "/quad-media/keaney-lift.svg",
+  "/feed/keaney-lift.svg": "/quad-media/keaney-lift.svg",
+  "/feed/memorial-union.png": "/quad-media/memorial-union.svg",
+  "/feed/memorial-union.svg": "/quad-media/memorial-union.svg",
+  "/feed/library-carothers.png": "/quad-media/library-night.svg",
+  "/feed/library-night.svg": "/quad-media/library-night.svg",
+  "/feed/involvement-fair.svg": "/quad-media/involvement-fair.svg",
+  "/feed/quad-sunset.svg": "/quad-media/quad-sunset.svg",
+  "/feed/lab-science.svg": "/quad-media/lab-science.svg"
+};
+
+function rewriteFeedPublicPath(path: string): string {
+  if (path.startsWith("/feed/")) {
+    return `/quad-media/${path.slice(6)}`;
+  }
+  return path;
+}
+
+function migrateFeedImageUrl(url: string | undefined): string | undefined {
+  if (!url || typeof url !== "string") return url;
+  const raw = url.trim();
+  if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
+  }
+  const pathOnly = raw.split(/[?#]/)[0] ?? raw;
+  const suffix = raw.slice(pathOnly.length);
+  let p = pathOnly;
+  if (!p.startsWith("/")) {
+    p = `/${p.replace(/^\/+/, "")}`;
+  }
+  const mapped = FEED_IMAGE_ALIASES[p] ?? FEED_IMAGE_ALIASES[pathOnly];
+  const out = rewriteFeedPublicPath(mapped ?? p);
+  return out + suffix;
+}
+
 export const POST_REACTION_DEFS: { kind: PostReactionKind; emoji: string; label: string }[] = [
   { kind: "nod", emoji: "👍", label: "Nod" },
   { kind: "hype", emoji: "🔥", label: "Hype" },
@@ -31,6 +73,8 @@ export function normalizeFeedPost(post: FeedPost & { confirmations?: number }): 
       )
     : [];
   const r = post.reactions;
+  const imageUrl = migrateFeedImageUrl(post.imageUrl);
+
   if (r && typeof r === "object") {
     return {
       id: post.id,
@@ -42,7 +86,7 @@ export function normalizeFeedPost(post: FeedPost & { confirmations?: number }): 
       timestamp: post.timestamp,
       ramarks,
       comments,
-      ...(post.imageUrl ? { imageUrl: post.imageUrl } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
       ...(post.authorHandle ? { authorHandle: post.authorHandle } : {}),
       ...(post.streakDays != null ? { streakDays: post.streakDays } : {}),
       ...(post.postEmoji ? { postEmoji: post.postEmoji } : {})
@@ -59,7 +103,7 @@ export function normalizeFeedPost(post: FeedPost & { confirmations?: number }): 
     timestamp: post.timestamp,
     ramarks,
     comments,
-    ...(post.imageUrl ? { imageUrl: post.imageUrl } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
     ...(post.authorHandle ? { authorHandle: post.authorHandle } : {}),
     ...(post.streakDays != null ? { streakDays: post.streakDays } : {}),
     ...(post.postEmoji ? { postEmoji: post.postEmoji } : {})
