@@ -1,3 +1,4 @@
+import { FeedPostImage } from "@/components/ig/feed-post-image";
 import { RamarkChipsUri } from "@/components/ig/ramark-chips";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -36,8 +37,12 @@ export function FeedPanel({
             </div>
             {post.imageUrl ? (
               <div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-uri-navy/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={post.imageUrl} alt="" className="max-h-48 w-full object-cover" />
+                <FeedPostImage
+                  src={post.imageUrl}
+                  alt={post.title}
+                  className="max-h-48 w-full object-cover"
+                  placeholderClassName="flex min-h-32 w-full items-center justify-center rounded-2xl bg-uri-navy/5 text-xs font-medium text-uri-navy/50"
+                />
               </div>
             ) : null}
             <h3 className="mt-3 text-lg font-semibold">{post.title}</h3>

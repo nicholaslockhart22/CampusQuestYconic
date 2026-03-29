@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FeedPostImage } from "@/components/ig/feed-post-image";
 import { RamarkChips } from "@/components/ig/ramark-chips";
 import { POST_REACTION_DEFS, totalReactions } from "@/lib/post-reactions";
 import type { FeedPost, PostReactionKind } from "@/lib/types";
@@ -69,8 +70,12 @@ export function InstagramFeed({
 
           {post.imageUrl ? (
             <div className="mx-3 overflow-hidden rounded-lg ring-1 ring-cq-keaney/30">
-              {/* eslint-disable-next-line @next/next/no-img-element -- data URLs + public paths */}
-              <img src={post.imageUrl} alt="" className="max-h-80 w-full object-cover" />
+              <FeedPostImage
+                src={post.imageUrl}
+                alt={post.title}
+                className="max-h-80 w-full object-cover"
+                placeholderClassName="flex min-h-32 w-full items-center justify-center bg-cq-keaneyIce/80 text-xs font-medium text-ig-secondary"
+              />
             </div>
           ) : null}
 
