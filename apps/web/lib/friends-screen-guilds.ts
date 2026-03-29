@@ -250,6 +250,24 @@ export const FRIENDS_GUILD_BY_ID = new Map<string, FriendsScreenGuild>(
   FRIENDS_SCREEN_GUILDS.map((g) => [g.id, g])
 );
 
+export function sortFriendsGuildMembersForDisplay(
+  members: FriendsScreenGuildMember[]
+): FriendsScreenGuildMember[] {
+  const order: Record<FriendsGuildMemberRole, number> = { founder: 0, cofounder: 1, member: 2 };
+  return [...members].sort((a, b) => order[a.role] - order[b.role]);
+}
+
+/** Leaderboard / discovery: highest guild level first. */
+export function sortGuildsByLevelDesc(guilds: FriendsScreenGuild[]): FriendsScreenGuild[] {
+  return [...guilds].sort((a, b) => {
+    if (b.level !== a.level) return b.level - a.level;
+    if (b.insight.guildTotalXp !== a.insight.guildTotalXp) {
+      return b.insight.guildTotalXp - a.insight.guildTotalXp;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export function friendsGuildsByCategory(): Record<FriendsGuildCategory, FriendsScreenGuild[]> {
   const map: Record<FriendsGuildCategory, FriendsScreenGuild[]> = {
     Study: [],

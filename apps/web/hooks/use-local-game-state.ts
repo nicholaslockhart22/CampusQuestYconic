@@ -38,16 +38,46 @@ function mergeStats(base: StatBlock, delta: Partial<StatBlock>): StatBlock {
   };
 }
 
+const MAX_RECRUITED_BOSSES = 4;
+
+function defaultRecruitedLoot(): BossBattle["lootPreview"] {
+  return [
+    { name: "Campus Loot Cache", rarity: "common" },
+    { name: "Rhody Sigil", rarity: "uncommon" },
+    { name: "Dean's Spark", rarity: "legendary" }
+  ];
+}
+
 function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuestState {
   const legacy = raw as RawPersisted;
-  const bossBattles =
-    Array.isArray(legacy.bossBattles) && legacy.bossBattles.length > 0
-      ? legacy.bossBattles
-      : legacy.bossBattle
-        ? [legacy.bossBattle]
-        : getSampleState().bossBattles;
-
   const base = raw as CampusQuestState;
+
+  let recruitedBosses: BossBattle[] = Array.isArray(base.recruitedBosses)
+    ? base.recruitedBosses.map((b) => ({ ...b }))
+    : [];
+
+  const legacyBosses: BossBattle[] =
+    Array.isArray(legacy.bossBattles) && legacy.bossBattles.length > 0
+      ? legacy.bossBattles.map((b) => ({ ...b }))
+      : legacy.bossBattle
+        ? [{ ...legacy.bossBattle }]
+        : [];
+
+  if (recruitedBosses.length === 0 && legacyBosses.length > 0) {
+    recruitedBosses = legacyBosses.slice(0, MAX_RECRUITED_BOSSES);
+  }
+
+  recruitedBosses = recruitedBosses.slice(0, MAX_RECRUITED_BOSSES);
+
+  let activeRecruitedBossId: string | null =
+    typeof base.activeRecruitedBossId === "string" ? base.activeRecruitedBossId : null;
+  if (activeRecruitedBossId && !recruitedBosses.some((b) => b.id === activeRecruitedBossId)) {
+    activeRecruitedBossId = recruitedBosses[0]?.id ?? null;
+  }
+  if (!activeRecruitedBossId && recruitedBosses.length > 0) {
+    activeRecruitedBossId = recruitedBosses[0].id;
+  }
+
   const feedFollowingRaw =
     Array.isArray(base.feedFollowing) && base.feedFollowing.length > 0
       ? base.feedFollowing
@@ -59,7 +89,9 @@ function normalizeLoadedState(raw: CampusQuestState | RawPersisted): CampusQuest
       rewardClaimed: quest.rewardClaimed ?? false
     })),
     guilds: normalizeGuildsList(base.guilds),
-    bossBattles,
+    bossBattles: [],
+    recruitedBosses,
+    activeRecruitedBossId,
     feed: (base.feed || []).map((p) =>
       normalizeFeedPost(p as FeedPost & { confirmations?: number })
     ),
@@ -127,21 +159,29 @@ export function useLocalGameState() {
         return { ...quest, progress: Math.min(quest.goal, quest.progress + 1) };
       });
 
-      const bossBattles = current.bossBattles.map((b) => ({ ...b }));
-      const activeIdx = bossBattles.findIndex((b) => b.prepProgress < b.prepGoal);
+      const recruitedBosses = current.recruitedBosses.map((b) => ({ ...b }));
+      const activeId = current.activeRecruitedBossId;
+      const activeIdx =
+        activeId != null ? recruitedBosses.findIndex((b) => b.id === activeId) : -1;
       let prepComplete = false;
       let completedBossName = "";
       let prepLine = "";
       if (activeIdx >= 0) {
-        const b = bossBattles[activeIdx];
-        const prevPrep = b.prepProgress;
-        const newPrep = Math.min(b.prepGoal, prevPrep + 1);
-        bossBattles[activeIdx] = { ...b, prepProgress: newPrep };
-        prepComplete = newPrep >= b.prepGoal && prevPrep < b.prepGoal;
-        completedBossName = b.name;
-        prepLine = `${newPrep}/${b.prepGoal} on ${b.name}`;
+        const b = recruitedBosses[activeIdx];
+        if (b.prepProgress < b.prepGoal) {
+          const prevPrep = b.prepProgress;
+          const newPrep = Math.min(b.prepGoal, prevPrep + 1);
+          recruitedBosses[activeIdx] = { ...b, prepProgress: newPrep };
+          prepComplete = newPrep >= b.prepGoal && prevPrep < b.prepGoal;
+          completedBossName = b.name;
+          prepLine = `${newPrep}/${b.prepGoal} on ${b.name}`;
+        } else {
+          prepLine = `${b.name} already primed`;
+        }
+      } else if (recruitedBosses.length === 0) {
+        prepLine = "Recruit a boss on Battle to chip prep";
       } else {
-        prepLine = "All bosses primed";
+        prepLine = "No active boss — set one on Battle";
       }
 
       const leaderboard = syncLeaderboard(current.leaderboard, profile);
@@ -179,7 +219,8 @@ export function useLocalGameState() {
         profile: rankedProfile,
         activities: [activity, ...current.activities],
         quests: nextQuests,
-        bossBattles,
+        recruitedBosses,
+        bossBattles: [],
         leaderboard,
         notifications: [...topNotifications, ...current.notifications]
       };
@@ -383,6 +424,48 @@ export function useLocalGameState() {
     });
   }
 
+  function recruitBoss(payload: { name: string; theme: string; prepGoal: number }) {
+    const name = payload.name.trim();
+    if (!name) return;
+    setState((current) => {
+      if (current.recruitedBosses.length >= MAX_RECRUITED_BOSSES) return current;
+      const rawGoal = Number(payload.prepGoal);
+      const prepGoal = Number.isFinite(rawGoal) ? Math.max(1, Math.min(99, Math.round(rawGoal))) : 10;
+      const newBoss: BossBattle = {
+        id: `rb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        theme: payload.theme.trim() || "Custom threat",
+        prepProgress: 0,
+        prepGoal,
+        lootPreview: defaultRecruitedLoot()
+      };
+      const recruitedBosses = [...current.recruitedBosses, newBoss];
+      const activeRecruitedBossId = current.activeRecruitedBossId ?? newBoss.id;
+      return { ...current, recruitedBosses, activeRecruitedBossId, bossBattles: [] };
+    });
+  }
+
+  function deleteRecruitedBoss(bossId: string) {
+    setState((current) => {
+      const recruitedBosses = current.recruitedBosses.filter((b) => b.id !== bossId);
+      let activeRecruitedBossId = current.activeRecruitedBossId;
+      if (activeRecruitedBossId === bossId) {
+        activeRecruitedBossId = recruitedBosses[0]?.id ?? null;
+      }
+      return { ...current, recruitedBosses, activeRecruitedBossId, bossBattles: [] };
+    });
+  }
+
+  function setActiveRecruitedBoss(bossId: string | null) {
+    setState((current) => {
+      if (bossId === null) {
+        return { ...current, activeRecruitedBossId: null, bossBattles: [] };
+      }
+      if (!current.recruitedBosses.some((b) => b.id === bossId)) return current;
+      return { ...current, activeRecruitedBossId: bossId, bossBattles: [] };
+    });
+  }
+
   return {
     state,
     logActivity,
@@ -394,6 +477,9 @@ export function useLocalGameState() {
     reactToFeedPost,
     addFeedComment,
     addFeedPost,
-    updateProfile
+    updateProfile,
+    recruitBoss,
+    deleteRecruitedBoss,
+    setActiveRecruitedBoss
   };
 }

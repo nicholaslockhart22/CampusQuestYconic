@@ -165,8 +165,15 @@ export interface CampusQuestState {
   profile: CharacterProfile;
   activities: ActivityLog[];
   quests: Quest[];
-  /** Active boss prep tracks; legacy saves may only have `bossBattle` */
+  /**
+   * Legacy boss list — migrated into `recruitedBosses` on load when that list was empty.
+   * Kept empty in normalized state; use `recruitedBosses` for UI.
+   */
   bossBattles: BossBattle[];
+  /** User-created bosses (max 4) on the Battle screen */
+  recruitedBosses: BossBattle[];
+  /** Only this boss gains prep from `logActivity` when set */
+  activeRecruitedBossId: string | null;
   /** Campus-wide discovery feed */
   feed: FeedPost[];
   /** People you follow (classmates & guildmates) */

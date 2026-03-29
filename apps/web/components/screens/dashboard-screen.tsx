@@ -38,9 +38,14 @@ export function DashboardScreen() {
         </div>
 
         <div className="space-y-6">
-          {state.bossBattles.map((boss) => (
-            <BossBattlePanel key={boss.id} boss={boss} />
-          ))}
+          {state.recruitedBosses.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-uri-navy/20 bg-white/60 px-4 py-6 text-sm text-uri-navy/60">
+              No bosses yet — recruit up to four on the <strong className="text-uri-navy">Battle</strong> tab and set
+              which one is active to earn prep from logs.
+            </p>
+          ) : (
+            state.recruitedBosses.map((boss) => <BossBattlePanel key={boss.id} boss={boss} />)
+          )}
           <LeaderboardPanel entries={state.leaderboard} />
           <InventoryPanel items={state.inventory} />
           <NotificationsPanel

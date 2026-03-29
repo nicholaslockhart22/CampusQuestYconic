@@ -20,9 +20,13 @@ export function QuestsScreen() {
           Logging study, focus sprints, events, and workouts advances different quest tags. When a bar fills, claim your XP—loot rolls can drop straight into inventory.
         </p>
       </Card>
-      {state.bossBattles.map((boss) => (
-        <BossBattlePanel key={boss.id} boss={boss} />
-      ))}
+      {state.recruitedBosses.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-uri-navy/20 bg-white/60 px-4 py-5 text-sm text-uri-navy/60">
+          Recruit bosses on <strong className="text-uri-navy">Battle</strong> to track prep alongside quests.
+        </p>
+      ) : (
+        state.recruitedBosses.map((boss) => <BossBattlePanel key={boss.id} boss={boss} />)
+      )}
       <QuestBoard quests={state.quests} onClaimReward={claimQuestReward} />
     </AppShell>
   );

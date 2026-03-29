@@ -157,42 +157,9 @@ export function getSampleState(): CampusQuestState {
         rewardClaimed: false
       }
     ],
-    bossBattles: [
-      {
-        id: "boss-1",
-        name: "Midterm Hydra",
-        theme: "Three exams in five days",
-        prepProgress: 7,
-        prepGoal: 10,
-        lootPreview: [
-          { name: "Common Notes Cache", rarity: "common" },
-          { name: "Rare Focus Sigil", rarity: "rare" },
-          { name: "Legendary Dean's Favor", rarity: "legendary" }
-        ]
-      },
-      {
-        id: "boss-2",
-        name: "Finals Archon",
-        theme: "Capstone + two lab finals same week",
-        prepProgress: 3,
-        prepGoal: 12,
-        lootPreview: [
-          { name: "Archon Index Cards", rarity: "uncommon" },
-          { name: "Caffeinated Elixir", rarity: "rare" }
-        ]
-      },
-      {
-        id: "boss-3",
-        name: "Career Fair Golem",
-        theme: "Resume polish + employer queue stamina",
-        prepProgress: 0,
-        prepGoal: 6,
-        lootPreview: [
-          { name: "Business Card Stack", rarity: "common" },
-          { name: "Recruiter's Respect", rarity: "legendary" }
-        ]
-      }
-    ],
+    bossBattles: [],
+    recruitedBosses: [],
+    activeRecruitedBossId: null,
     feed: [
       {
         id: "f-wbb-jordan-kim",
